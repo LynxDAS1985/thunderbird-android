@@ -1,5 +1,11 @@
 # AI Agent Guide for Thunderbird for Android
 
+## Правила собственного проекта
+
+Перед работой прочитайте [CLAUDE.md](CLAUDE.md) и все файлы [.memory-bank](.memory-bank/README.md).
+Они описывают русскоязычный рабочий процесс, учёт задач и выпуск собственного приложения.
+Технические требования исходного проекта приведены ниже и сохраняются.
+
 This file defines requirements for AI coding agents and automated systems contributing to this repository.
 
 AI-generated or AI-assisted contributions are acceptable only if they comply with these rules and meet the same

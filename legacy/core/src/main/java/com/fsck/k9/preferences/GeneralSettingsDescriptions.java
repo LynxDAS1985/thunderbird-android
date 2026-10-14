@@ -65,6 +65,7 @@ import static net.thunderbird.core.preference.display.visualSettings.message.lis
 import static net.thunderbird.core.preference.display.visualSettings.message.list.DisplayMessageListSettingsKt.MESSAGE_LIST_SETTINGS_DEFAULT_IS_SHOW_CORRESPONDENT_NAMES;
 import static net.thunderbird.core.preference.display.visualSettings.DisplayVisualSettingsKt.DISPLAY_SETTINGS_DEFAULT_IS_USE_MESSAGE_VIEW_FIXED_WIDTH_FONT;
 import static net.thunderbird.core.preference.notification.NotificationPreferenceKt.NOTIFICATION_PREFERENCE_DEFAULT_IS_QUIET_TIME_ENABLED;
+import static net.thunderbird.core.preference.notification.NotificationPreferenceKt.NOTIFICATION_PREFERENCE_DEFAULT_IS_SHOW_CONTACT_PICTURE_IN_NOTIFICATION;
 import static net.thunderbird.core.preference.notification.NotificationPreferenceKt.NOTIFICATION_PREFERENCE_DEFAULT_QUIET_TIME_END;
 import static net.thunderbird.core.preference.notification.NotificationPreferenceKt.NOTIFICATION_PREFERENCE_DEFAULT_QUIET_TIME_STARTS;
 import static net.thunderbird.core.preference.privacy.PrivacySettingsKt.PRIVACY_SETTINGS_DEFAULT_HIDE_TIME_ZONE;
@@ -243,6 +244,9 @@ class GeneralSettingsDescriptions {
         ));
         s.put("showContactPicture", Settings.versions(
             new V(25, new BooleanSetting(MESSAGE_LIST_SETTINGS_DEFAULT_IS_SHOW_CONTACT_PICTURE))
+        ));
+        s.put("showContactPictureInNotification", Settings.versions(
+            new V(111, new BooleanSetting(NOTIFICATION_PREFERENCE_DEFAULT_IS_SHOW_CONTACT_PICTURE_IN_NOTIFICATION))
         ));
         s.put("autofitWidth", Settings.versions(
             new V(28, new BooleanSetting(DISPLAY_SETTINGS_DEFAULT_IS_AUTO_FIT_WIDTH))

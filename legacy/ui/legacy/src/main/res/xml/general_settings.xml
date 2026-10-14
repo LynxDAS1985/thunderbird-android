@@ -303,18 +303,24 @@
                 android:defaultValue="#FF1093F5"
                 />
 
-            <CheckBoxPreference
-                android:key="messagelist_show_contact_picture"
-                android:summary="@string/global_settings_show_contact_picture_summary"
-                android:title="@string/global_settings_show_contact_picture_label"
-                />
+            <PreferenceCategory
+                android:key="legacy_sender_avatar_message_list_preferences"
+                >
 
-            <CheckBoxPreference
-                android:dependency="messagelist_show_contact_picture"
-                android:key="messagelist_colorize_missing_contact_pictures"
-                android:summary="@string/global_settings_colorize_missing_contact_pictures_summary"
-                android:title="@string/global_settings_colorize_missing_contact_pictures_label"
-                />
+                <CheckBoxPreference
+                    android:key="messagelist_show_contact_picture"
+                    android:summary="@string/global_settings_show_contact_picture_summary"
+                    android:title="@string/global_settings_show_contact_picture_label"
+                    />
+
+                <CheckBoxPreference
+                    android:dependency="messagelist_show_contact_picture"
+                    android:key="messagelist_colorize_missing_contact_pictures"
+                    android:summary="@string/global_settings_colorize_missing_contact_pictures_summary"
+                    android:title="@string/global_settings_colorize_missing_contact_pictures_label"
+                    />
+
+            </PreferenceCategory>
 
             <CheckBoxPreference
                 android:key="messagelist_background_as_unread_indicator"
@@ -377,6 +383,49 @@
                 android:key="messageview_body_content_type"
                 app:useSimpleSummaryProvider="true"
                 android:title="@string/global_settings_messageview_body_content_type_title" />
+        </PreferenceCategory>
+
+    </PreferenceScreen>
+
+    <PreferenceScreen
+        android:icon="@drawable/ic_account_color"
+        android:key="sender_avatar_preferences"
+        android:summary="@string/sender_avatar_preferences_summary"
+        android:title="@string/sender_avatar_preferences_title"
+        search:ignore="true"
+        >
+
+        <PreferenceCategory
+            android:key="sender_avatar_message_list_preferences"
+            android:title="@string/messagelist_preferences"
+            >
+
+            <CheckBoxPreference
+                android:key="messagelist_show_contact_picture"
+                android:summary="@string/global_settings_show_contact_picture_summary"
+                android:title="@string/global_settings_show_contact_picture_label"
+                />
+
+            <CheckBoxPreference
+                android:dependency="messagelist_show_contact_picture"
+                android:key="messagelist_colorize_missing_contact_pictures"
+                android:summary="@string/global_settings_colorize_missing_contact_pictures_summary"
+                android:title="@string/global_settings_colorize_missing_contact_pictures_label"
+                />
+
+        </PreferenceCategory>
+
+        <PreferenceCategory
+            android:key="sender_avatar_notification_preferences"
+            android:title="@string/notifications_title"
+            >
+
+            <SwitchPreferenceCompat
+                android:key="notification_show_contact_picture"
+                android:summary="@string/notification_show_contact_picture_summary"
+                android:title="@string/notification_show_contact_picture_title"
+                />
+
         </PreferenceCategory>
 
     </PreferenceScreen>
@@ -508,11 +557,17 @@
             android:summary="@string/notification_summary_delete_summary"
             />
 
-        <SwitchPreferenceCompat
-            android:key="notification_show_contact_picture"
-            android:title="@string/notification_show_contact_picture_title"
-            android:summary="@string/notification_show_contact_picture_summary"
-            />
+        <PreferenceCategory
+            android:key="legacy_sender_avatar_notification_preferences"
+            >
+
+            <SwitchPreferenceCompat
+                android:key="notification_show_contact_picture"
+                android:summary="@string/notification_show_contact_picture_summary"
+                android:title="@string/notification_show_contact_picture_title"
+                />
+
+        </PreferenceCategory>
 
     </PreferenceScreen>
 

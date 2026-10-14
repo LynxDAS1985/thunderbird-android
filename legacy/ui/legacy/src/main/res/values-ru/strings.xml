@@ -959,6 +959,8 @@
     <string name="changelog_type_fixed_text">ИСПРАВЛЕНО</string>
     <string name="notification_show_contact_picture_title">Показывать изображения контактов в уведомлениях</string>
     <string name="notification_show_contact_picture_summary">Показывать аватары отправителей в уведомлениях о новых сообщениях</string>
+    <string name="sender_avatar_preferences_title">Аватары отправителей</string>
+    <string name="sender_avatar_preferences_summary">Фото контактов в списке писем и уведомлениях</string>
     <string name="changelog_latest_label_text">ПОСЛЕДНЕЕ</string>
     <string name="animation_setting_on">Включена</string>
     <string name="animation_setting_off">Отключена</string>

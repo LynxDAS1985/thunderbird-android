@@ -106,6 +106,20 @@ class GeneralSettingsFragment : PreferenceFragmentCompat() {
                 }
             }
 
+        when (
+            featureFlagProvider.provide(GeneratedFeatureFlagKey.ENABLE_SENDER_AVATAR_SETTINGS)
+                .toSenderAvatarPreferenceMode()
+        ) {
+            SenderAvatarPreferenceMode.Unified -> {
+                findPreference<Preference>(LEGACY_SENDER_AVATAR_MESSAGE_LIST_PREFERENCES)?.remove()
+                findPreference<Preference>(LEGACY_SENDER_AVATAR_NOTIFICATION_PREFERENCES)?.remove()
+            }
+
+            SenderAvatarPreferenceMode.Legacy -> {
+                findPreference<Preference>(SENDER_AVATAR_PREFERENCES)?.remove()
+            }
+        }
+
         findPreference<Preference>("debug_secret_debug_screen")?.apply {
             if (!BuildConfig.DEBUG) {
                 remove()
@@ -228,6 +242,11 @@ class GeneralSettingsFragment : PreferenceFragmentCompat() {
     companion object {
         private const val PREFERENCE_SCREEN_DEBUGGING = "debug_preferences"
         private const val PREFERENCE_DATA_COLLECTION = "data_collection"
+        private const val SENDER_AVATAR_PREFERENCES = "sender_avatar_preferences"
+        private const val LEGACY_SENDER_AVATAR_MESSAGE_LIST_PREFERENCES =
+            "legacy_sender_avatar_message_list_preferences"
+        private const val LEGACY_SENDER_AVATAR_NOTIFICATION_PREFERENCES =
+            "legacy_sender_avatar_notification_preferences"
         const val DEFAULT_SYNC_FILENAME = "thunderbird-sync-logs"
 
         fun create(rootKey: String? = null) = GeneralSettingsFragment().withArguments(ARG_PREFERENCE_ROOT to rootKey)

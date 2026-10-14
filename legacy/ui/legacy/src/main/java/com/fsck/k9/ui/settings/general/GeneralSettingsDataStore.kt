@@ -15,6 +15,8 @@ import net.thunderbird.core.preference.GeneralSettingsManager
 import net.thunderbird.core.preference.LockScreenNotificationVisibility
 import net.thunderbird.core.preference.SplitViewMode
 import net.thunderbird.core.preference.SubTheme
+import net.thunderbird.core.preference.avatar.SenderAvatarSettings
+import net.thunderbird.core.preference.avatar.SenderAvatarSettingsPreferenceManager
 import net.thunderbird.core.preference.display.visualSettings.message.list.MessageListDateTimeFormat
 import net.thunderbird.core.preference.display.visualSettings.message.list.UiDensity
 import net.thunderbird.core.preference.interaction.PostMarkAsUnreadNavigation
@@ -25,6 +27,7 @@ class GeneralSettingsDataStore(
     private val jobManager: K9JobManager,
     private val appLanguageManager: AppLanguageManager,
     private val generalSettingsManager: GeneralSettingsManager,
+    private val senderAvatarSettingsPreferenceManager: SenderAvatarSettingsPreferenceManager,
     private val telemetryManager: TelemetryManager,
 ) : PreferenceDataStore() {
 
@@ -41,6 +44,7 @@ class GeneralSettingsDataStore(
         val privacySettings = config.privacy
         val visualSettings = config.display.visualSettings
         val messageListSettings = visualSettings.messageListSettings
+        val senderAvatarSettings = senderAvatarSettingsPreferenceManager.getConfig()
         return when (key) {
             "fixed_message_view_theme" -> coreSettings.fixedMessageViewTheme
             "show_unified_inbox" -> inboxSettings.isShowUnifiedInbox
@@ -50,8 +54,8 @@ class GeneralSettingsDataStore(
             "messagelist_sender_above_subject" -> inboxSettings.isMessageListSenderAboveSubject
             "messagelist_show_contact_name" -> messageListSettings.isShowContactName
             "messagelist_change_contact_name_color" -> messageListSettings.isChangeContactNameColor
-            "messagelist_show_contact_picture" -> messageListSettings.isShowContactPicture
-            "messagelist_colorize_missing_contact_pictures" -> messageListSettings.isColorizeMissingContactPictures
+            "messagelist_show_contact_picture" -> senderAvatarSettings.isShowInMessageList
+            "messagelist_colorize_missing_contact_pictures" -> senderAvatarSettings.isColorizeMissing
             "messagelist_background_as_unread_indicator" -> messageListSettings.isUseBackgroundAsUnreadIndicator
             "show_compose_button" -> inboxSettings.isShowComposeButtonOnMessageList
             "threaded_view" -> inboxSettings.isThreadedViewEnabled
@@ -61,7 +65,7 @@ class GeneralSettingsDataStore(
             "quiet_time_enabled" -> notificationSettings.isQuietTimeEnabled
             "disable_notifications_during_quiet_time" -> !notificationSettings.isNotificationDuringQuietTimeEnabled
             "notification_summary_delete" -> notificationSettings.isSummaryDeleteActionEnabled
-            "notification_show_contact_picture" -> notificationSettings.isShowContactPictureInNotification
+            "notification_show_contact_picture" -> senderAvatarSettings.isShowInNotifications
             "privacy_hide_useragent" -> privacySettings.isHideUserAgent
             "privacy_hide_timezone" -> privacySettings.isHideTimeZone
             "privacy_incognito_keyboard" -> privacySettings.isIncognitoKeyboardEnabled
@@ -88,10 +92,10 @@ class GeneralSettingsDataStore(
 
             "messagelist_show_contact_name" -> setIsShowContactName(isShowContactName = value)
             "messagelist_change_contact_name_color" -> setIsChangeContactNameColor(isChangeContactNameColor = value)
-            "messagelist_show_contact_picture" -> setIsShowContactPicture(isShowContactPicture = value)
-            "messagelist_colorize_missing_contact_pictures" -> setIsColorizeMissingContactPictures(
-                isColorizeMissingContactPictures = value,
-            )
+            "messagelist_show_contact_picture" -> updateSenderAvatarSettings { copy(isShowInMessageList = value) }
+            "messagelist_colorize_missing_contact_pictures" -> updateSenderAvatarSettings {
+                copy(isColorizeMissing = value)
+            }
 
             "messagelist_background_as_unread_indicator" -> setIsUseBackgroundAsUnreadIndicator(
                 isUseBackgroundAsUnreadIndicator = value,
@@ -104,9 +108,9 @@ class GeneralSettingsDataStore(
             "quiet_time_enabled" -> setIsQuietTimeEnabled(isQuietTimeEnabled = value)
             "disable_notifications_during_quiet_time" -> setIsNotificationDuringQuietTimeEnabled(!value)
             "notification_summary_delete" -> setIsSummaryDeleteActionEnabled(isSummaryDeleteActionEnabled = value)
-            "notification_show_contact_picture" -> setIsShowContactPictureInNotification(
-                isShowContactPictureInNotification = value,
-            )
+            "notification_show_contact_picture" -> updateSenderAvatarSettings {
+                copy(isShowInNotifications = value)
+            }
 
             "privacy_hide_useragent" -> setIsHideUserAgent(isHideUserAgent = value)
             "privacy_hide_timezone" -> setIsHideTimeZone(isHideTimeZone = value)
@@ -309,6 +313,11 @@ class GeneralSettingsDataStore(
         }
     }
 
+    private fun updateSenderAvatarSettings(update: SenderAvatarSettings.() -> SenderAvatarSettings) {
+        skipSaveSettings = true
+        senderAvatarSettingsPreferenceManager.save(senderAvatarSettingsPreferenceManager.getConfig().update())
+    }
+
     private fun setTheme(value: String) {
         skipSaveSettings = true
         generalSettingsManager.update { settings ->
@@ -504,22 +513,6 @@ class GeneralSettingsDataStore(
         }
     }
 
-    private fun setIsShowContactPicture(isShowContactPicture: Boolean) {
-        skipSaveSettings = true
-        generalSettingsManager.update { settings ->
-            val displaySettings = settings.display
-            settings.copy(
-                display = displaySettings.copy(
-                    visualSettings = displaySettings.visualSettings.copy(
-                        messageListSettings = displaySettings.visualSettings.messageListSettings.copy(
-                            isShowContactPicture = isShowContactPicture,
-                        ),
-                    ),
-                ),
-            )
-        }
-    }
-
     private fun setIsChangeContactNameColor(isChangeContactNameColor: Boolean) {
         skipSaveSettings = true
         generalSettingsManager.update { settings ->
@@ -529,22 +522,6 @@ class GeneralSettingsDataStore(
                     visualSettings = displaySettings.visualSettings.copy(
                         messageListSettings = displaySettings.visualSettings.messageListSettings.copy(
                             isChangeContactNameColor = isChangeContactNameColor,
-                        ),
-                    ),
-                ),
-            )
-        }
-    }
-
-    private fun setIsColorizeMissingContactPictures(isColorizeMissingContactPictures: Boolean) {
-        skipSaveSettings = true
-        generalSettingsManager.update { settings ->
-            val displaySettings = settings.display
-            settings.copy(
-                display = displaySettings.copy(
-                    visualSettings = displaySettings.visualSettings.copy(
-                        messageListSettings = displaySettings.visualSettings.messageListSettings.copy(
-                            isColorizeMissingContactPictures = isColorizeMissingContactPictures,
                         ),
                     ),
                 ),
@@ -670,17 +647,6 @@ class GeneralSettingsDataStore(
             settings.copy(
                 notification = settings.notification.copy(
                     isSummaryDeleteActionEnabled = isSummaryDeleteActionEnabled,
-                ),
-            )
-        }
-    }
-
-    private fun setIsShowContactPictureInNotification(isShowContactPictureInNotification: Boolean) {
-        skipSaveSettings = true
-        generalSettingsManager.update { settings ->
-            settings.copy(
-                notification = settings.notification.copy(
-                    isShowContactPictureInNotification = isShowContactPictureInNotification,
                 ),
             )
         }

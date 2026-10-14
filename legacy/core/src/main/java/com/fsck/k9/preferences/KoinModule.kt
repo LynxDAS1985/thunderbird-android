@@ -9,6 +9,8 @@ import net.thunderbird.core.preference.DefaultPreferenceChangeBroker
 import net.thunderbird.core.preference.GeneralSettingsManager
 import net.thunderbird.core.preference.PreferenceChangeBroker
 import net.thunderbird.core.preference.PreferenceChangePublisher
+import net.thunderbird.core.preference.avatar.DefaultSenderAvatarSettingsPreferenceManager
+import net.thunderbird.core.preference.avatar.SenderAvatarSettingsPreferenceManager
 import net.thunderbird.core.preference.debugging.DebuggingSettingsPreferenceManager
 import net.thunderbird.core.preference.debugging.DefaultDebuggingSettingsPreferenceManager
 import net.thunderbird.core.preference.display.DefaultDisplaySettingsPreferenceManager
@@ -121,6 +123,13 @@ val preferencesModule = module {
             storage = get(),
             storageEditor = get(),
             preferenceChangeBroker = get(),
+        )
+    }
+    single<SenderAvatarSettingsPreferenceManager> {
+        DefaultSenderAvatarSettingsPreferenceManager(
+            messageListPreferencesManager = get(),
+            notificationPreferenceManager = get(),
+            scope = get(named("AppCoroutineScope")),
         )
     }
     single<NetworkSettingsPreferenceManager> {

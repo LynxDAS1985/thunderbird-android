@@ -27,6 +27,7 @@ val settingsUiModule = module {
             jobManager = get(),
             appLanguageManager = get(),
             generalSettingsManager = get(),
+            senderAvatarSettingsPreferenceManager = get(),
             telemetryManager = get(),
         )
     }

@@ -28,6 +28,8 @@ class FeatureFlagCatalogResourceTest {
             contains("\"version\"")
             contains("\"flags\"")
             contains("\"overrides\"")
+            contains("\"key\": \"enable_sender_avatar_settings\"")
+            contains("\"enable_sender_avatar_settings\": true")
         }
     }
 
