@@ -82,3 +82,5 @@ Commit отложен до успешных обязательных прове�
 **Откат и остаток.** Новый путь отключается флагом `enable_sender_avatar_settings` без удаления сохранённых ключей. Дальше нужны DMARC-адаптер, SVG-растеризация, подключение BIMI к resolver/UI, проверка обновления старого APK и все сценарии на телефоне.
 
 **Финальная сборка 2026-10-16.** `:app-thunderbird:assembleFullDebug` завершился успешно за 10 минут 53 секунды: 2189 задач. В `distrib/thunderbird-full-debug.apk` помещён файл размером 48 413 235 байт, SHA-256 `959D4256EEF6E96F3972B72BC43A54E31C0621FF59EF94DFA741EEF50BC8F658`. `apksigner` подтвердил схемы v1/v2 и сертификат `Android Debug`. APK пригоден для тестов, но не для коммерческой публикации.
+
+**Git.** Код resolver, Android-адаптеры, безопасный BIMI-модуль, тесты и основная документация сохранены коммитом `11effa1` (`Connect sender avatar resolver and add safe BIMI loader`). Отправка выполняется в ветку `custom-brand-thunderbird-24.0` личного remote `personal`.
