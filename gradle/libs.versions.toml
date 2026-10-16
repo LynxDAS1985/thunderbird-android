@@ -11,6 +11,7 @@
 # 4. Run the app and check for any issues.
 
 [versions]
+androidsvg = "1.4"
 androidBilling = "9.1.0"
 androidDesugar = "2.1.5"
 androidMaterial = "1.14.0"
@@ -156,6 +157,7 @@ tb-quality-detekt = { id = "net.thunderbird.gradle.plugin.quality.detekt" }
 tb-quality-spotless = { id = "net.thunderbird.gradle.plugin.quality.spotless" }
 
 [libraries]
+androidsvg = { module = "com.caverock:androidsvg-aar", version.ref = "androidsvg" }
 android-billing = { module = "com.android.billingclient:billing", version.ref = "androidBilling" }
 android-billing-ktx = { module = "com.android.billingclient:billing-ktx", version.ref = "androidBilling" }
 android-desugar = { module = "com.android.tools:desugar_jdk_libs", version.ref = "androidDesugar" }
