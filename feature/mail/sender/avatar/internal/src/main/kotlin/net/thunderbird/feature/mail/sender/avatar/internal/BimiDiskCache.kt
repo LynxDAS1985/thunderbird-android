@@ -18,6 +18,8 @@ internal class BimiDiskCache(
             paths.filter { it.fileName.toString().endsWith(".tmp") }.forEach(Files::deleteIfExists)
         }
         removeOrphans()
+        removeExpiredNegativeEntries()
+        trim()
     }
 
     fun read(key: String): Entry? {
@@ -44,10 +46,29 @@ internal class BimiDiskCache(
         return requireNotNull(read(key))
     }
 
+    fun readNegative(key: String): NegativeEntry? {
+        val metadata = negativePath(key)
+        if (!Files.isRegularFile(metadata)) return null
+        val entry = parseNegative(metadata) ?: return removeNegative(metadata)
+        if (now() > entry.expiresAt) return removeNegative(metadata)
+        Files.setLastModifiedTime(metadata, java.nio.file.attribute.FileTime.fromMillis(now()))
+        return entry
+    }
+
+    fun writeNegative(key: String, reason: NegativeReason, ttlMillis: Long) {
+        require(ttlMillis > 0)
+        atomicWrite(negativePath(key), "${now() + ttlMillis}:${reason.name}".toByteArray())
+        trim()
+    }
+
     data class Entry(val path: Path, val bytes: ByteArray, val expiresAt: Long, val staleUntil: Long) {
         fun isFresh(now: Long) = now <= expiresAt
         fun isUsable(now: Long) = now <= staleUntil
     }
+
+    data class NegativeEntry(val reason: NegativeReason, val expiresAt: Long)
+
+    enum class NegativeReason { RECORD_NOT_FOUND, INVALID_RECORD }
 
     private fun atomicWrite(target: Path, bytes: ByteArray) {
         val temporary = Files.createTempFile(directory, target.fileName.toString(), ".tmp")
@@ -63,18 +84,26 @@ internal class BimiDiskCache(
     }
 
     private fun trim() {
-        val entries = Files.list(directory).use { paths ->
+        val positiveEntries = Files.list(directory).use { paths ->
             paths.filter { it.fileName.toString().endsWith(".svg") }
                 .map { data -> data to directory.resolve(data.fileName.toString().removeSuffix(".svg") + ".meta") }
                 .filter { (_, metadata) -> Files.isRegularFile(metadata) }
+                .map { (data, metadata) ->
+                    CacheFiles(listOf(data, metadata), Files.getLastModifiedTime(data).toMillis())
+                }
                 .toList()
         }
-        var size = entries.sumOf { (data, metadata) -> Files.size(data) + Files.size(metadata) }
-        entries.sortedBy { (data, _) -> Files.getLastModifiedTime(data).toMillis() }.forEach { (data, metadata) ->
+        val negativeEntries = Files.list(directory).use { paths ->
+            paths.filter { it.fileName.toString().endsWith(NEGATIVE_SUFFIX) }
+                .map { file -> CacheFiles(listOf(file), Files.getLastModifiedTime(file).toMillis()) }
+                .toList()
+        }
+        val entries = positiveEntries + negativeEntries
+        var size = entries.sumOf { entry -> entry.files.sumOf(Files::size) }
+        entries.sortedBy(CacheFiles::lastAccessedAt).forEach { entry ->
             if (size > maxBytes) {
-                size -= Files.size(data) + Files.size(metadata)
-                Files.deleteIfExists(data)
-                Files.deleteIfExists(metadata)
+                size -= entry.files.sumOf(Files::size)
+                entry.files.forEach(Files::deleteIfExists)
             }
         }
     }
@@ -86,6 +115,7 @@ internal class BimiDiskCache(
             val counterpart = when {
                 name.endsWith(".svg") -> directory.resolve(name.removeSuffix(".svg") + ".meta")
                 name.endsWith(".meta") -> directory.resolve(name.removeSuffix(".meta") + ".svg")
+                name.endsWith(NEGATIVE_SUFFIX) -> file
                 else -> null
             }
             if (counterpart == null || !Files.isRegularFile(counterpart)) Files.deleteIfExists(file)
@@ -97,6 +127,37 @@ internal class BimiDiskCache(
         return null
     }
 
+    private fun removeExpiredNegativeEntries() {
+        Files.list(directory).use { paths ->
+            paths.filter { it.fileName.toString().endsWith(NEGATIVE_SUFFIX) }
+                .forEach { file ->
+                    val entry = parseNegative(file)
+                    if (entry == null || now() > entry.expiresAt) Files.deleteIfExists(file)
+                }
+        }
+    }
+
+    private fun parseNegative(path: Path): NegativeEntry? {
+        val fields = runCatching { Files.readString(path).trim().split(':') }.getOrNull()
+            ?.takeIf { it.size == 2 } ?: return null
+        val expiresAt = fields[0].toLongOrNull()?.takeIf { it >= 0 } ?: return null
+        val reason = runCatching { NegativeReason.valueOf(fields[1]) }.getOrNull() ?: return null
+        return NegativeEntry(reason, expiresAt)
+    }
+
+    private fun removeNegative(path: Path): NegativeEntry? {
+        Files.deleteIfExists(path)
+        return null
+    }
+
+    private fun negativePath(key: String): Path = directory.resolve("${hash(key)}$NEGATIVE_SUFFIX")
+
     private fun hash(value: String): String = MessageDigest.getInstance("SHA-256")
         .digest(value.toByteArray()).joinToString("") { "%02x".format(it) }
+
+    private data class CacheFiles(val files: List<Path>, val lastAccessedAt: Long)
+
+    private companion object {
+        const val NEGATIVE_SUFFIX = ".negative"
+    }
 }

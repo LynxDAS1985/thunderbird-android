@@ -98,11 +98,47 @@ class DefaultBimiLogoRepositoryTest {
         assertThat(available.mayShowVerifiedShield).isFalse()
     }
 
+    @Test
+    fun `negative cache avoids repeated lookup until TTL expires`() {
+        var now = 1_000L
+        val directory = Files.createTempDirectory("bimi-cache-test")
+        val resolver = FakeRecordResolver(BimiRecordLookupResult.NotFound)
+        val testSubject = repository(FakeTransport(response()), directory, { now }, resolver)
+
+        assertThat(testSubject.load(request()))
+            .isEqualTo(BimiLogoResult.Rejected(BimiLogoResult.Reason.BIMI_RECORD_NOT_FOUND))
+        assertThat(testSubject.load(request()))
+            .isEqualTo(BimiLogoResult.Rejected(BimiLogoResult.Reason.BIMI_RECORD_NOT_FOUND))
+        assertThat(resolver.calls).isEqualTo(1)
+
+        now += 15 * 60 * 1000L + 1
+        testSubject.load(request())
+        assertThat(resolver.calls).isEqualTo(2)
+    }
+
+    @Test
+    fun `invalid BIMI record is negatively cached but DNS errors are not`() {
+        val invalidResolver = FakeRecordResolver(BimiRecordLookupResult.Invalid)
+        val invalidRepository = repository(FakeTransport(response()), resolver = invalidResolver)
+
+        invalidRepository.load(request())
+        invalidRepository.load(request())
+
+        assertThat(invalidResolver.calls).isEqualTo(1)
+
+        val errorResolver = FakeRecordResolver(BimiRecordLookupResult.Error)
+        val errorRepository = repository(FakeTransport(response()), resolver = errorResolver)
+        errorRepository.load(request())
+        errorRepository.load(request())
+        assertThat(errorResolver.calls).isEqualTo(2)
+    }
+
     private fun repository(
         transport: FakeTransport,
         directory: java.nio.file.Path = Files.createTempDirectory("bimi-cache-test"),
         now: () -> Long = { 1_000L },
-    ) = DefaultBimiLogoRepository(directory, FakeRecordResolver(), transport, StrictSvgValidator(), now)
+        resolver: FakeRecordResolver = FakeRecordResolver(),
+    ) = DefaultBimiLogoRepository(directory, resolver, transport, StrictSvgValidator(), now)
 
     private fun request(
         verification: SenderVerificationResult = SenderVerificationResult.Verified(
@@ -130,9 +166,16 @@ class DefaultBimiLogoRepositoryTest {
         }
     }
 
-    private class FakeRecordResolver : BimiRecordResolver {
-        override fun lookup(domain: String, selector: String) = BimiRecordLookupResult.Found(
+    private class FakeRecordResolver(
+        private val result: BimiRecordLookupResult = BimiRecordLookupResult.Found(
             BimiRecord(java.net.URI("https://brand.example/logo.svg"), 300_000, dnssecAuthenticated = true),
-        )
+        ),
+    ) : BimiRecordResolver {
+        var calls = 0
+
+        override fun lookup(domain: String, selector: String): BimiRecordLookupResult {
+            calls++
+            return result
+        }
     }
 }

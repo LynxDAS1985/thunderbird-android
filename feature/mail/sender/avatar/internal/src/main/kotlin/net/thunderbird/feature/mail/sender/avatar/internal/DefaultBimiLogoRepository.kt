@@ -29,10 +29,31 @@ internal class DefaultBimiLogoRepository(
             ?: return rejected(BimiLogoResult.Reason.INVALID_DOMAIN)
         val selector = BimiSecurity.normalizeSelector(request.selector)
             ?: return rejected(BimiLogoResult.Reason.INVALID_SELECTOR)
+        val negativeCacheKey = "$domain|$selector"
+        cache.readNegative(negativeCacheKey)?.let { entry ->
+            return rejected(entry.reason.toResultReason())
+        }
         val record = when (val result = recordResolver.lookup(domain, selector)) {
             is BimiRecordLookupResult.Found -> result.record
-            BimiRecordLookupResult.NotFound -> return rejected(BimiLogoResult.Reason.BIMI_RECORD_NOT_FOUND)
-            BimiRecordLookupResult.Invalid -> return rejected(BimiLogoResult.Reason.INVALID_BIMI_RECORD)
+
+            BimiRecordLookupResult.NotFound -> {
+                cache.writeNegative(
+                    negativeCacheKey,
+                    BimiDiskCache.NegativeReason.RECORD_NOT_FOUND,
+                    NEGATIVE_TTL_MILLIS,
+                )
+                return rejected(BimiLogoResult.Reason.BIMI_RECORD_NOT_FOUND)
+            }
+
+            BimiRecordLookupResult.Invalid -> {
+                cache.writeNegative(
+                    negativeCacheKey,
+                    BimiDiskCache.NegativeReason.INVALID_RECORD,
+                    NEGATIVE_TTL_MILLIS,
+                )
+                return rejected(BimiLogoResult.Reason.INVALID_BIMI_RECORD)
+            }
+
             BimiRecordLookupResult.Error -> return rejected(BimiLogoResult.Reason.DNS_ERROR)
         }
         val uri = BimiSecurity.validateUrl(record.logoUri.toString())
@@ -91,9 +112,15 @@ internal class DefaultBimiLogoRepository(
         return SenderVerificationMethod.BIMI_ASSERTION in verification.methods
     }
 
+    private fun BimiDiskCache.NegativeReason.toResultReason(): BimiLogoResult.Reason = when (this) {
+        BimiDiskCache.NegativeReason.RECORD_NOT_FOUND -> BimiLogoResult.Reason.BIMI_RECORD_NOT_FOUND
+        BimiDiskCache.NegativeReason.INVALID_RECORD -> BimiLogoResult.Reason.INVALID_BIMI_RECORD
+    }
+
     private companion object {
         const val MIN_TTL_MILLIS = 5 * 60 * 1000L
         const val MAX_TTL_MILLIS = 24 * 60 * 60 * 1000L
         const val STALE_TTL_MILLIS = 7 * 24 * 60 * 60 * 1000L
+        const val NEGATIVE_TTL_MILLIS = 15 * 60 * 1000L
     }
 }
