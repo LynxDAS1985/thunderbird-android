@@ -136,6 +136,9 @@ import net.thunderbird.core.common.mail.Flag
 import net.thunderbird.core.logging.Logger
 import net.thunderbird.core.outcome.Outcome
 import net.thunderbird.core.preference.GeneralSettingsManager
+import net.thunderbird.core.preference.avatar.SenderAvatarResolution
+import net.thunderbird.core.preference.avatar.SenderAvatarResolver
+import net.thunderbird.core.preference.avatar.SenderAvatarSettingsPreferenceManager
 import net.thunderbird.core.preference.interaction.InteractionSettings
 import net.thunderbird.components.ui.bolt.atom.ClickableSurface
 import net.thunderbird.components.ui.bolt.atom.icon.Icon
@@ -229,6 +232,16 @@ class MessageListFragment :
     private val actionModeCallback = ActionModeCallback()
     private val contactRepository: ContactRepository by inject()
     private val avatarMonogramCreator: AvatarMonogramCreator by inject()
+    private val senderAvatarSettingsPreferenceManager: SenderAvatarSettingsPreferenceManager by inject()
+    private val coreSenderAvatarResolver: SenderAvatarResolver by inject()
+    private val senderAvatarResolver by lazy {
+        MessageListSenderAvatarResolver(
+            contactRepository = contactRepository,
+            avatarMonogramCreator = avatarMonogramCreator,
+            settingsManager = senderAvatarSettingsPreferenceManager,
+            resolver = coreSenderAvatarResolver,
+        )
+    }
 
     private val chooseFolderForMoveLauncher: ActivityResultLauncher<ChooseFolderResultContract.Input> =
         registerForActivityResult(ChooseFolderResultContract(ChooseFolderActivity.Action.MOVE)) { result ->
@@ -1322,8 +1335,7 @@ class MessageListFragment :
             showContactPicture = preferences?.showMessageAvatar == true,
             isSelected = messageListItem.messageReference in selectedMessages,
             isActive = messageListItem.messageReference == activeMessage,
-            monogram = "",
-            url = null,
+            avatarResolution = SenderAvatarResolution.Hidden,
         )
         viewModel.event(MessageItemEvent.ToggleSelectMessages(messageItem))
     }
@@ -1338,8 +1350,7 @@ class MessageListFragment :
             showContactPicture = preferences?.showMessageAvatar == true,
             isSelected = item.messageReference in selectedMessages,
             isActive = item.messageReference == activeMessage,
-            monogram = "",
-            url = null,
+            avatarResolution = SenderAvatarResolution.Hidden,
         )
         setFlag(messageItem, Flag.FLAGGED, !item.isStarred)
     }
@@ -2368,19 +2379,12 @@ class MessageListFragment :
             .asFlow()
             .map { info ->
                 info.messageListItems.map { item ->
-                    val url = contactRepository.getPhotoUri(
-                        item.displayAddress?.address ?: "",
-                    )
-                    val monogram = avatarMonogramCreator.create(
-                        item.displayName.toString(),
-                        item.displayAddress?.address,
-                    )
+                    val avatar = senderAvatarResolver.resolve(item, preferences.showMessageAvatar)
                     item.toMessageItemUi(
                         showContactPicture = preferences.showMessageAvatar,
                         isSelected = false,
                         isActive = item.messageReference == activeMessage,
-                        monogram = monogram,
-                        url = url?.toString(),
+                        avatarResolution = avatar,
                     )
                 }
             }

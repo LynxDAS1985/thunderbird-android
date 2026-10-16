@@ -569,7 +569,7 @@ class MessageViewFragment :
 
     private fun displayHeaderForLoadingMessage(message: LocalMessage) {
         val showStar = !isOutbox
-        messageTopView.setHeaders(message, account, showStar)
+        messageTopView.setHeaders(message, account, messageReference, showStar)
 
         if (account.isOpenPgpProviderConfigured) {
             messageTopView.messageHeaderView.setCryptoStatusLoading()
@@ -963,7 +963,7 @@ class MessageViewFragment :
         val newState = !message.isSet(flag)
         messagingController.setFlag(account, message.folder.databaseId, listOf(message), flag, newState)
 
-        messageTopView.setHeaders(message, account, true)
+        messageTopView.setHeaders(message, account, messageReference, true)
 
         invalidateMenu()
     }

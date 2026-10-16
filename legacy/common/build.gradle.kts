@@ -32,6 +32,7 @@ dependencies {
 
     testImplementation(projects.core.logging.testing)
     testImplementation(libs.robolectric)
+    testImplementation(libs.mockito.kotlin)
     testImplementation(projects.feature.account.fake)
 }
 

@@ -127,6 +127,8 @@ include(
     ":feature:mail:message:export:impl-eml",
     ":feature:mail:message:reader:api",
     ":feature:mail:message:reader:impl",
+    ":feature:mail:sender:avatar:api",
+    ":feature:mail:sender:avatar:internal",
 )
 
 include(

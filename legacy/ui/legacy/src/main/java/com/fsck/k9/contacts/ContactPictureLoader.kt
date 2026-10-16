@@ -11,6 +11,8 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.FutureTarget
 import com.fsck.k9.mail.Address
 import com.fsck.k9.view.RecipientSelectView.Recipient
+import net.thunderbird.core.preference.avatar.SenderAvatarResolution
+import net.thunderbird.core.preference.avatar.SenderAvatarSource
 
 class ContactPictureLoader(
     private val context: Context,
@@ -29,6 +31,21 @@ class ContactPictureLoader(
             .into(imageView)
     }
 
+    fun setContactPicture(imageView: ImageView, resolution: SenderAvatarResolution, fallbackAddress: Address?) {
+        when (resolution) {
+            SenderAvatarResolution.Hidden -> imageView.setImageDrawable(null)
+            is SenderAvatarResolution.Visible -> when (val source = resolution.source) {
+                is SenderAvatarSource.Contact -> setContactPicture(imageView, Uri.parse(source.image.key))
+                is SenderAvatarSource.Monogram -> {
+                    if (fallbackAddress != null) setFallbackPicture(imageView, fallbackAddress)
+                    else imageView.setImageResource(Icons.Outlined.Check)
+                }
+                SenderAvatarSource.Generic -> imageView.setImageResource(Icons.Outlined.Check)
+                is SenderAvatarSource.VerifiedBrand -> setContactPicture(imageView, Uri.parse(source.image.key))
+            }
+        }
+    }
+
     fun setContactPicture(imageView: ImageView, recipient: Recipient) {
         val contactPictureUri = recipient.photoThumbnailUri
         if (contactPictureUri != null) {
@@ -38,7 +55,7 @@ class ContactPictureLoader(
         }
     }
 
-    private fun setContactPicture(imageView: ImageView, contactPictureUri: Uri) {
+    fun setContactPicture(imageView: ImageView, contactPictureUri: Uri) {
         Glide.with(imageView.context)
             .load(contactPictureUri)
             .placeholder(Icons.Outlined.AccountCircle)

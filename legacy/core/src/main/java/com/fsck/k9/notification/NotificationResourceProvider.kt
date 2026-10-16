@@ -1,7 +1,9 @@
 package com.fsck.k9.notification
 
 import android.graphics.Bitmap
+import app.k9mail.legacy.message.controller.MessageReference
 import com.fsck.k9.mail.Address
+import net.thunderbird.core.preference.avatar.SenderAvatarSettings
 
 interface NotificationResourceProvider {
     val iconWarning: Int
@@ -31,7 +33,11 @@ interface NotificationResourceProvider {
     fun authenticationErrorTitle(): String
     fun authenticationErrorBody(accountName: String): String
 
-    suspend fun avatar(address: Address): Bitmap?
+    suspend fun avatar(
+        address: Address,
+        messageReference: MessageReference,
+        settings: SenderAvatarSettings,
+    ): Bitmap?
 
     fun notifyErrorTitle(): String
     fun notifyErrorText(): String

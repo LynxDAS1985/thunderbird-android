@@ -1,17 +1,15 @@
 package com.fsck.k9.ui.messagelist.item
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
-import app.k9mail.core.android.common.contact.ContactRepository
 import com.fsck.k9.ui.messagelist.MessageListAppearance
 import com.fsck.k9.ui.messagelist.MessageListItem
 import kotlin.time.ExperimentalTime
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toPersistentList
-import net.thunderbird.feature.account.avatar.AvatarMonogramCreator
+import net.thunderbird.core.preference.avatar.SenderAvatarResolution
+import net.thunderbird.core.preference.avatar.SenderAvatarSource
 import net.thunderbird.feature.mail.message.list.preferences.MessageListPreferences
 import net.thunderbird.feature.mail.message.list.ui.component.config.MessageItemAccountIndicator
 import net.thunderbird.feature.mail.message.list.ui.component.organism.ReadMessageItem
@@ -30,32 +28,19 @@ internal fun MessageItemContent(
     item: MessageListItem,
     isActive: Boolean,
     isSelected: Boolean,
-    contactRepository: ContactRepository,
-    avatarMonogramCreator: AvatarMonogramCreator,
+    avatarResolution: SenderAvatarResolution,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     onAvatarClick: () -> Unit,
     onFavouriteClick: (Boolean) -> Unit,
     appearance: MessageListAppearance,
 ) {
-    val uri by remember(item.displayAddress?.address) {
-        mutableStateOf(
-            contactRepository.getPhotoUri(
-                item.displayAddress?.address ?: "",
-            ),
-        )
-    }
-    val monogram by remember(item.displayName.toString(), item.displayAddress?.address) {
-        mutableStateOf(avatarMonogramCreator.create(item.displayName.toString(), item.displayAddress?.address))
-    }
-
     val messageItemUi = rememberMessageItemUi(
         item = item,
         showContactPicture = appearance.showContactPicture,
         isSelected = isSelected,
         isActive = isActive,
-        monogram = monogram,
-        url = uri?.toString(),
+        avatarResolution = avatarResolution,
     )
 
     val preferences = remember(appearance) {
@@ -107,18 +92,16 @@ private fun rememberMessageItemUi(
     showContactPicture: Boolean,
     isSelected: Boolean,
     isActive: Boolean,
-    monogram: String,
-    url: String?,
-): MessageItemUi = remember(item, showContactPicture, isSelected, isActive, monogram, url) {
-    item.toMessageItemUi(showContactPicture, isSelected, isActive, monogram, url)
+    avatarResolution: SenderAvatarResolution,
+): MessageItemUi = remember(item, showContactPicture, isSelected, isActive, avatarResolution) {
+    item.toMessageItemUi(showContactPicture, isSelected, isActive, avatarResolution)
 }
 
 internal fun MessageListItem.toMessageItemUi(
     showContactPicture: Boolean,
     isSelected: Boolean,
     isActive: Boolean,
-    monogram: String,
-    url: String?,
+    avatarResolution: SenderAvatarResolution,
 ): MessageItemUi = MessageItemUi(
     state = if (isRead) MessageItemUi.State.Read else MessageItemUi.State.Unread,
     id = messageUid,
@@ -130,11 +113,7 @@ internal fun MessageListItem.toMessageItemUi(
     senders = ComposedAddressUi(
         displayName = displayAddress?.address ?: "",
         displayNameStyles = buildSenderStyles(),
-        avatar = when {
-            !showContactPicture -> null
-            showContactPicture && url != null -> Avatar.Image(url = url)
-            else -> Avatar.Monogram(monogram)
-        },
+        avatar = avatarResolution.toComposeAvatar().takeIf { showContactPicture },
         color = Color(contactColor),
     ),
     subject = subject ?: "n/a",
@@ -149,6 +128,16 @@ internal fun MessageListItem.toMessageItemUi(
     threadCount = threadCount,
     active = isActive,
 )
+
+private fun SenderAvatarResolution.toComposeAvatar(): Avatar? = when (this) {
+    SenderAvatarResolution.Hidden -> null
+    is SenderAvatarResolution.Visible -> when (val source = source) {
+        is SenderAvatarSource.Contact -> Avatar.Image(source.image.key)
+        is SenderAvatarSource.VerifiedBrand -> Avatar.Image(source.image.key)
+        is SenderAvatarSource.Monogram -> Avatar.Monogram(source.value)
+        SenderAvatarSource.Generic -> null
+    }
+}
 
 internal fun MessageListItem.buildSenderStyles(): ImmutableList<ComposedAddressStyle> = buildList {
     when (val separatorIndex = displayName.indexOf(',')) {

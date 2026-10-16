@@ -6,6 +6,7 @@ import androidx.appcompat.widget.TooltipCompat
 import androidx.core.view.isVisible
 import com.fsck.k9.contacts.ContactPictureLoader
 import com.fsck.k9.ui.R
+import com.fsck.k9.ui.messageview.MessageViewSenderAvatar
 import com.google.android.material.textview.MaterialTextView
 import com.mikepenz.fastadapter.FastAdapter
 import com.mikepenz.fastadapter.items.AbstractItem
@@ -50,7 +51,18 @@ internal class ParticipantItem(
 
             if (item.showContactsPicture) {
                 contactPicture.isVisible = true
-                item.contactPictureLoader.setContactPicture(contactPicture, participant.address)
+                when (val senderAvatar = participant.senderAvatar) {
+                    MessageViewSenderAvatar.Hidden -> contactPicture.isVisible = false
+                    is MessageViewSenderAvatar.Visible -> {
+                        val imageUri = senderAvatar.imageUri
+                        if (imageUri != null) {
+                            item.contactPictureLoader.setContactPicture(contactPicture, imageUri)
+                        } else {
+                            item.contactPictureLoader.setContactPicture(contactPicture, senderAvatar.fallbackAddress)
+                        }
+                    }
+                    null -> item.contactPictureLoader.setContactPicture(contactPicture, participant.address)
+                }
             } else {
                 contactPicture.isVisible = false
             }

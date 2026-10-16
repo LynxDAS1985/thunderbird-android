@@ -1,7 +1,9 @@
 package com.fsck.k9.notification
 
 import android.graphics.Bitmap
+import app.k9mail.legacy.message.controller.MessageReference
 import com.fsck.k9.mail.Address
+import net.thunderbird.core.preference.avatar.SenderAvatarSettings
 
 class TestNotificationResourceProvider : NotificationResourceProvider {
     override val iconWarning: Int = 1
@@ -42,7 +44,11 @@ class TestNotificationResourceProvider : NotificationResourceProvider {
             "Tap to open notification settings."
     }
 
-    override suspend fun avatar(address: Address): Bitmap? = null
+    override suspend fun avatar(
+        address: Address,
+        messageReference: MessageReference,
+        settings: SenderAvatarSettings,
+    ): Bitmap? = null
 
     override fun certificateErrorTitle(): String = "Certificate error"
 

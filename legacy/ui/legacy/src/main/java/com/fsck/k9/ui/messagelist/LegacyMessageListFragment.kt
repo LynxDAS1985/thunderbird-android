@@ -99,6 +99,8 @@ import net.thunderbird.core.featureflag.keys.GeneratedFeatureFlagKey
 import net.thunderbird.core.logging.Logger
 import net.thunderbird.core.outcome.Outcome
 import net.thunderbird.core.preference.GeneralSettingsManager
+import net.thunderbird.core.preference.avatar.SenderAvatarResolver
+import net.thunderbird.core.preference.avatar.SenderAvatarSettingsPreferenceManager
 import net.thunderbird.core.preference.display.visualSettings.message.list.DisplayMessageListSettings
 import net.thunderbird.core.preference.interaction.InteractionSettings
 import net.thunderbird.core.ui.theme.api.FeatureThemeProvider
@@ -182,6 +184,8 @@ class LegacyMessageListFragment :
 
     private val contactRepository: ContactRepository by inject()
     private val avatarMonogramCreator: AvatarMonogramCreator by inject()
+    private val senderAvatarSettingsPreferenceManager: SenderAvatarSettingsPreferenceManager by inject()
+    private val coreSenderAvatarResolver: SenderAvatarResolver by inject()
     private val relativeDateTimeFormatter: RelativeDateTimeFormatter by inject()
 
     private val chooseFolderForMoveLauncher: ActivityResultLauncher<ChooseFolderResultContract.Input> =
@@ -400,6 +404,12 @@ class LegacyMessageListFragment :
     }
 
     private fun createMessageListAdapter(): MessageListAdapter {
+        val senderAvatarResolver = MessageListSenderAvatarResolver(
+            contactRepository = contactRepository,
+            avatarMonogramCreator = avatarMonogramCreator,
+            settingsManager = senderAvatarSettingsPreferenceManager,
+            resolver = coreSenderAvatarResolver,
+        )
         @OptIn(ExperimentalTime::class)
         return MessageListAdapter(
             theme = requireActivity().theme,
@@ -410,8 +420,7 @@ class LegacyMessageListFragment :
             appearance = ::messageListAppearance,
             themeProvider = featureThemeProvider,
             featureFlagProvider = featureFlagProvider,
-            contactRepository = contactRepository,
-            avatarMonogramCreator = avatarMonogramCreator,
+            senderAvatarResolver = senderAvatarResolver,
             formatDate = { timestamp ->
                 relativeDateTimeFormatter.formatDate(timestamp, messageListSettings.dateTimeFormat)
             },

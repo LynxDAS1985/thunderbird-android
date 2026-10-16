@@ -1,0 +1,138 @@
+package net.thunderbird.feature.mail.sender.avatar.internal
+
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isTrue
+import java.nio.file.Files
+import net.thunderbird.core.preference.avatar.SenderMessageIdentity
+import net.thunderbird.core.preference.avatar.SenderVerificationMethod
+import net.thunderbird.core.preference.avatar.SenderVerificationResult
+import net.thunderbird.feature.mail.sender.avatar.BimiLogoRequest
+import net.thunderbird.feature.mail.sender.avatar.BimiLogoResult
+import org.junit.Test
+
+class DefaultBimiLogoRepositoryTest {
+    private val message = SenderMessageIdentity("account", "folder", "message")
+    private val validSvg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><path/></svg>".toByteArray()
+
+    @Test
+    fun `does not call transport without exact DMARC verification`() {
+        val transport = FakeTransport(response())
+        val testSubject = repository(transport)
+        val request = request(verification = SenderVerificationResult.NotChecked)
+
+        val result = testSubject.load(request)
+
+        assertThat(result).isEqualTo(BimiLogoResult.Rejected(BimiLogoResult.Reason.MESSAGE_NOT_DMARC_VERIFIED))
+        assertThat(transport.calls).isEqualTo(0)
+    }
+
+    @Test
+    fun `stores valid exact SVG and returns shield permission`() {
+        val testSubject = repository(FakeTransport(response()))
+
+        val result = testSubject.load(request())
+
+        val available = result as BimiLogoResult.Available
+        assertThat(available.source).isEqualTo(BimiLogoResult.Source.NETWORK)
+        assertThat(available.mayShowVerifiedShield).isFalse()
+        assertThat(available.image.key.startsWith("file:")).isTrue()
+    }
+
+    @Test
+    fun `permits shield only with exact DMARC and BIMI evidence`() {
+        val verification = SenderVerificationResult.Verified(
+            message,
+            setOf(SenderVerificationMethod.DMARC_ALIGNMENT, SenderVerificationMethod.BIMI_ASSERTION),
+        )
+
+        val result = repository(FakeTransport(response())).load(request(verification))
+
+        assertThat((result as BimiLogoResult.Available).mayShowVerifiedShield).isTrue()
+    }
+
+    @Test
+    fun `rejects wrong status MIME oversized and dangerous SVG`() {
+        val cases = listOf(
+            response(code = 404) to BimiLogoResult.Reason.INVALID_RESPONSE,
+            response(contentType = "image/png") to BimiLogoResult.Reason.INVALID_RESPONSE,
+            response(body = ByteArray(SafeBimiTransport.MAX_SVG_BYTES + 1)) to BimiLogoResult.Reason.INVALID_SVG,
+            response(
+                body = "<svg viewBox='0 0 1 1'><script/></svg>".toByteArray(),
+            ) to BimiLogoResult.Reason.INVALID_SVG,
+        )
+
+        cases.forEach { (response, reason) ->
+            val result = repository(FakeTransport(response)).load(request())
+            assertThat(result).isEqualTo(BimiLogoResult.Rejected(reason))
+        }
+    }
+
+    @Test
+    fun `uses fresh cache without network`() {
+        var now = 1_000L
+        val directory = Files.createTempDirectory("bimi-cache-test")
+        repository(FakeTransport(response()), directory, { now }).load(request())
+        val failingTransport = FakeTransport(failure = java.io.IOException("offline"))
+
+        val result = repository(failingTransport, directory, { now + 1 }).load(request())
+
+        val available = result as BimiLogoResult.Available
+        assertThat(available.source).isEqualTo(BimiLogoResult.Source.FRESH_CACHE)
+        assertThat(failingTransport.calls).isEqualTo(0)
+    }
+
+    @Test
+    fun `stale cache never permits verified shield`() {
+        var now = 1_000L
+        val directory = Files.createTempDirectory("bimi-cache-test")
+        repository(FakeTransport(response()), directory, { now }).load(request())
+        now += 300_001
+        val testSubject = repository(FakeTransport(failure = java.io.IOException("offline")), directory, { now })
+
+        val result = testSubject.load(request())
+
+        val available = result as BimiLogoResult.Available
+        assertThat(available.source).isEqualTo(BimiLogoResult.Source.STALE_CACHE)
+        assertThat(available.mayShowVerifiedShield).isFalse()
+    }
+
+    private fun repository(
+        transport: FakeTransport,
+        directory: java.nio.file.Path = Files.createTempDirectory("bimi-cache-test"),
+        now: () -> Long = { 1_000L },
+    ) = DefaultBimiLogoRepository(directory, FakeRecordResolver(), transport, StrictSvgValidator(), now)
+
+    private fun request(
+        verification: SenderVerificationResult = SenderVerificationResult.Verified(
+            message,
+            setOf(SenderVerificationMethod.DMARC_ALIGNMENT),
+        ),
+    ) = BimiLogoRequest(message, "example.com", verification)
+
+    private fun response(
+        code: Int = 200,
+        contentType: String = "image/svg+xml",
+        body: ByteArray = validSvg,
+    ) = BimiHttpResponse(code, contentType, body)
+
+    private class FakeTransport(
+        private val response: BimiHttpResponse? = null,
+        private val failure: Exception? = null,
+    ) : BimiTransport {
+        var calls = 0
+
+        override fun fetch(uri: java.net.URI): BimiHttpResponse {
+            calls++
+            failure?.let { throw it }
+            return requireNotNull(response)
+        }
+    }
+
+    private class FakeRecordResolver : BimiRecordResolver {
+        override fun lookup(domain: String, selector: String) = BimiRecordLookupResult.Found(
+            BimiRecord(java.net.URI("https://brand.example/logo.svg"), 300_000, dnssecAuthenticated = true),
+        )
+    }
+}

@@ -10,7 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import net.thunderbird.legacy.logging.Log
-import net.thunderbird.core.preference.notification.NotificationPreferenceManager
+import net.thunderbird.core.preference.avatar.SenderAvatarSettingsPreferenceManager
 import androidx.core.app.NotificationCompat.Builder as NotificationBuilder
 
 internal class SingleMessageNotificationCreator(
@@ -18,7 +18,7 @@ internal class SingleMessageNotificationCreator(
     private val actionCreator: NotificationActionCreator,
     private val resourceProvider: NotificationResourceProvider,
     private val lockScreenNotificationCreator: LockScreenNotificationCreator,
-    private val notificationPreferenceManager: NotificationPreferenceManager,
+    private val senderAvatarSettingsPreferenceManager: SenderAvatarSettingsPreferenceManager,
     private val application: Application,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -65,9 +65,10 @@ internal class SingleMessageNotificationCreator(
     }
 
     private suspend fun NotificationBuilder.setAvatar(content: NotificationContent) = apply {
-        if (!notificationPreferenceManager.getConfig().isShowContactPictureInNotification) return@apply
+        val settings = senderAvatarSettingsPreferenceManager.getConfig()
+        if (!settings.isShowInNotifications) return@apply
 
-        resourceProvider.avatar(content.sender)?.let {
+        resourceProvider.avatar(content.sender, content.messageReference, settings)?.let {
             setLargeIcon(IconCompat.createWithAdaptiveBitmap(it).toIcon(application))
         }
     }

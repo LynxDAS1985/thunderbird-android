@@ -18,8 +18,8 @@ import kotlinx.coroutines.test.runTest
 import net.thunderbird.core.android.account.LegacyAccountDto
 import net.thunderbird.core.android.testing.MockHelper.mockBuilder
 import net.thunderbird.core.android.testing.RobolectricTest
-import net.thunderbird.core.preference.notification.NotificationPreference
-import net.thunderbird.core.preference.notification.NotificationPreferenceManager
+import net.thunderbird.core.preference.avatar.SenderAvatarSettings
+import net.thunderbird.core.preference.avatar.SenderAvatarSettingsPreferenceManager
 import net.thunderbird.components.ui.testing.coroutines.MainDispatcherHelper
 import org.junit.After
 import org.junit.Before
@@ -30,7 +30,7 @@ import org.mockito.kotlin.mock
 
 class SingleMessageNotificationCreatorTest : RobolectricTest() {
     private val mainDispatcher = MainDispatcherHelper(UnconfinedTestDispatcher())
-    private val notificationPreferenceManager = FakeNotificationPreferenceManager()
+    private val senderAvatarSettingsPreferenceManager = FakeSenderAvatarSettingsPreferenceManager()
     private val resourceProvider = TestAvatarNotificationResourceProvider()
     private val notification = mock<Notification>()
     private val builder = mockBuilder<NotificationCompat.Builder> {
@@ -47,7 +47,7 @@ class SingleMessageNotificationCreatorTest : RobolectricTest() {
             actionCreator = createNotificationActionCreator(),
             resourceProvider = resourceProvider,
             lockScreenNotificationCreator = mock(),
-            notificationPreferenceManager = notificationPreferenceManager,
+            senderAvatarSettingsPreferenceManager = senderAvatarSettingsPreferenceManager,
             application = ApplicationProvider.getApplicationContext<Application>(),
         )
     }
@@ -59,7 +59,7 @@ class SingleMessageNotificationCreatorTest : RobolectricTest() {
 
     @Test
     fun `create notification looks up avatar when notification contact pictures are enabled`() = runTest {
-        notificationPreferenceManager.setShowContactPictureInNotification(true)
+        senderAvatarSettingsPreferenceManager.setShowInNotifications(true)
 
         testSubject.createSingleNotification(
             baseNotificationData = createBaseNotificationData(),
@@ -67,11 +67,13 @@ class SingleMessageNotificationCreatorTest : RobolectricTest() {
         ).join()
 
         assertThat(resourceProvider.avatarCalls).isEqualTo(1)
+        assertThat(resourceProvider.lastMessageReference).isEqualTo(MessageReference("account", 1, "uid"))
+        assertThat(resourceProvider.lastSettings?.isShowInNotifications).isEqualTo(true)
     }
 
     @Test
     fun `create notification skips avatar lookup when notification contact pictures are disabled`() = runTest {
-        notificationPreferenceManager.setShowContactPictureInNotification(false)
+        senderAvatarSettingsPreferenceManager.setShowInNotifications(false)
 
         testSubject.createSingleNotification(
             baseNotificationData = createBaseNotificationData(),
@@ -132,24 +134,34 @@ class SingleMessageNotificationCreatorTest : RobolectricTest() {
     private class TestAvatarNotificationResourceProvider :
         NotificationResourceProvider by TestNotificationResourceProvider() {
         var avatarCalls = 0
+        var lastMessageReference: MessageReference? = null
+        var lastSettings: SenderAvatarSettings? = null
 
-        override suspend fun avatar(address: Address): Bitmap? {
+        override suspend fun avatar(
+            address: Address,
+            messageReference: MessageReference,
+            settings: SenderAvatarSettings,
+        ): Bitmap? {
             avatarCalls += 1
+            lastMessageReference = messageReference
+            lastSettings = settings
             return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
         }
     }
 
-    private class FakeNotificationPreferenceManager : NotificationPreferenceManager {
-        private val prefs = MutableStateFlow(NotificationPreference())
+    private class FakeSenderAvatarSettingsPreferenceManager : SenderAvatarSettingsPreferenceManager {
+        private val prefs = MutableStateFlow(SenderAvatarSettings())
 
-        override fun save(config: NotificationPreference) = Unit
+        override fun save(config: SenderAvatarSettings) {
+            prefs.value = config
+        }
 
-        override fun getConfig(): NotificationPreference = prefs.value
+        override fun getConfig(): SenderAvatarSettings = prefs.value
 
-        override fun getConfigFlow(): Flow<NotificationPreference> = prefs
+        override fun getConfigFlow(): Flow<SenderAvatarSettings> = prefs
 
-        fun setShowContactPictureInNotification(isEnabled: Boolean) {
-            prefs.update { it.copy(isShowContactPictureInNotification = isEnabled) }
+        fun setShowInNotifications(isEnabled: Boolean) {
+            prefs.update { it.copy(isShowInNotifications = isEnabled) }
         }
     }
 }

@@ -11,6 +11,13 @@ val notificationModule = module {
             generalSettingsManager = get(),
         )
     }
-    single<NotificationResourceProvider> { K9NotificationResourceProvider(get()) }
+    single<NotificationResourceProvider> {
+        K9NotificationResourceProvider(
+            context = get(),
+            contactRepository = get(),
+            contactPictureLoader = get(),
+            senderAvatarResolver = get(),
+        )
+    }
     single<NotificationStrategy> { K9NotificationStrategy(get(), generalSettingsManager = get()) }
 }

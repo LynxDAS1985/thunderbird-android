@@ -10,6 +10,8 @@ import net.thunderbird.core.preference.GeneralSettingsManager
 import net.thunderbird.core.preference.PreferenceChangeBroker
 import net.thunderbird.core.preference.PreferenceChangePublisher
 import net.thunderbird.core.preference.avatar.DefaultSenderAvatarSettingsPreferenceManager
+import net.thunderbird.core.preference.avatar.DefaultSenderAvatarResolver
+import net.thunderbird.core.preference.avatar.SenderAvatarResolver
 import net.thunderbird.core.preference.avatar.SenderAvatarSettingsPreferenceManager
 import net.thunderbird.core.preference.debugging.DebuggingSettingsPreferenceManager
 import net.thunderbird.core.preference.debugging.DefaultDebuggingSettingsPreferenceManager
@@ -132,6 +134,7 @@ val preferencesModule = module {
             scope = get(named("AppCoroutineScope")),
         )
     }
+    single<SenderAvatarResolver> { DefaultSenderAvatarResolver() }
     single<NetworkSettingsPreferenceManager> {
         DefaultNetworkSettingsPreferenceManager(
             logger = get(),

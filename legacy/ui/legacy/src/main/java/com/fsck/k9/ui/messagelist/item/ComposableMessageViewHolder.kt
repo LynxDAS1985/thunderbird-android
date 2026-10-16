@@ -2,11 +2,10 @@ package com.fsck.k9.ui.messagelist.item
 
 import android.content.Context
 import androidx.compose.ui.platform.ComposeView
-import app.k9mail.core.android.common.contact.ContactRepository
 import com.fsck.k9.ui.messagelist.MessageListAppearance
 import com.fsck.k9.ui.messagelist.MessageListItem
+import com.fsck.k9.ui.messagelist.MessageListSenderAvatarResolver
 import net.thunderbird.core.ui.theme.api.FeatureThemeProvider
-import net.thunderbird.feature.account.avatar.AvatarMonogramCreator
 
 /**
  * A composable view holder for message list items.
@@ -20,14 +19,15 @@ class ComposableMessageViewHolder(
     private val onAvatarClick: (MessageListItem) -> Unit,
     private val onFavouriteClick: (MessageListItem) -> Unit,
     private val appearance: () -> MessageListAppearance,
-    private val contactRepository: ContactRepository,
-    private val avatarMonogramCreator: AvatarMonogramCreator,
+    private val senderAvatarResolver: MessageListSenderAvatarResolver,
 ) : MessageListViewHolder(composeView) {
 
     var uniqueId: Long = -1L
 
     fun bind(item: MessageListItem, isActive: Boolean, isSelected: Boolean) {
         uniqueId = item.uniqueId
+        val appearance = appearance()
+        val avatar = senderAvatarResolver.resolve(item, appearance.showContactPicture)
 
         composeView.setContent {
             themeProvider.WithTheme {
@@ -35,13 +35,12 @@ class ComposableMessageViewHolder(
                     item = item,
                     isActive = isActive,
                     isSelected = isSelected,
-                    contactRepository = contactRepository,
-                    avatarMonogramCreator = avatarMonogramCreator,
+                    avatarResolution = avatar,
                     onClick = { onClick(item) },
                     onLongClick = { onLongClick(item) },
                     onAvatarClick = { onAvatarClick(item) },
                     onFavouriteClick = { onFavouriteClick(item) },
-                    appearance = appearance(),
+                    appearance = appearance,
                 )
             }
         }
@@ -52,8 +51,7 @@ class ComposableMessageViewHolder(
         fun create(
             context: Context,
             themeProvider: FeatureThemeProvider,
-            contactRepository: ContactRepository,
-            avatarMonogramCreator: AvatarMonogramCreator,
+            senderAvatarResolver: MessageListSenderAvatarResolver,
             onClick: (MessageListItem) -> Unit,
             onLongClick: (MessageListItem) -> Unit,
             onFavouriteClick: (MessageListItem) -> Unit,
@@ -65,8 +63,7 @@ class ComposableMessageViewHolder(
             val holder = ComposableMessageViewHolder(
                 composeView = composeView,
                 themeProvider = themeProvider,
-                contactRepository = contactRepository,
-                avatarMonogramCreator = avatarMonogramCreator,
+                senderAvatarResolver = senderAvatarResolver,
                 onClick = onClick,
                 onLongClick = onLongClick,
                 onAvatarClick = onAvatarClick,

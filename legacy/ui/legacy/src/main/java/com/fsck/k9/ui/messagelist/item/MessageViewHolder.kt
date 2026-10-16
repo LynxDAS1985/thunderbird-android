@@ -26,6 +26,7 @@ import com.fsck.k9.mail.Address
 import com.fsck.k9.ui.R
 import com.fsck.k9.ui.messagelist.MessageListAppearance
 import com.fsck.k9.ui.messagelist.MessageListItem
+import com.fsck.k9.ui.messagelist.MessageListSenderAvatarResolver
 import com.google.android.material.textview.MaterialTextView
 import java.util.Locale
 import kotlin.math.max
@@ -39,6 +40,7 @@ class MessageViewHolder(
     private val theme: Resources.Theme,
     private val res: Resources,
     private val contactsPictureLoader: ContactPictureLoader,
+    private val senderAvatarResolver: MessageListSenderAvatarResolver,
     private val colors: MessageViewHolderColors,
 ) : MessageListViewHolder(view) {
 
@@ -60,6 +62,7 @@ class MessageViewHolder(
     @Suppress("LongMethod", "CyclomaticComplexMethod")
     fun bind(messageListItem: MessageListItem, isActive: Boolean, isSelected: Boolean) {
         val appearance = appearance()
+        val avatar = senderAvatarResolver.resolve(messageListItem, appearance.showContactPicture)
         if (appearance.showContactPicture) {
             contactPictureClickArea.isSelected = isSelected
             if (isSelected) {
@@ -109,7 +112,7 @@ class MessageViewHolder(
             }
 
             if (appearance.showContactPicture && contactPictureView.isVisible) {
-                setContactPicture(contactPictureView, displayAddress)
+                contactsPictureLoader.setContactPicture(contactPictureView, avatar, displayAddress)
             }
             itemView.setBackgroundColor(selectBackgroundColor(isSelected, isRead, isActive))
             updateWithThreadCount(displayThreadCount)
@@ -172,14 +175,6 @@ class MessageViewHolder(
             res.getString(R.string.preview_encrypted)
         } else {
             previewText
-        }
-    }
-
-    private fun setContactPicture(contactPictureView: ImageView, displayAddress: Address?) {
-        if (displayAddress != null) {
-            contactsPictureLoader.setContactPicture(contactPictureView, displayAddress)
-        } else {
-            contactPictureView.setImageResource(Icons.Outlined.Check)
         }
     }
 
@@ -283,6 +278,7 @@ class MessageViewHolder(
             theme: Resources.Theme,
             res: Resources,
             contactsPictureLoader: ContactPictureLoader,
+            senderAvatarResolver: MessageListSenderAvatarResolver,
             colors: MessageViewHolderColors,
             onClickListener: View.OnClickListener,
             onLongClickListener: View.OnLongClickListener,
@@ -299,6 +295,7 @@ class MessageViewHolder(
                 theme = theme,
                 res = res,
                 contactsPictureLoader = contactsPictureLoader,
+                senderAvatarResolver = senderAvatarResolver,
                 colors = colors,
             )
             val appearance = appearance()

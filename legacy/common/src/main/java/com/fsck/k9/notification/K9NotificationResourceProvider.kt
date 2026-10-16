@@ -2,15 +2,31 @@ package com.fsck.k9.notification
 
 import android.content.Context
 import android.graphics.Bitmap
+import app.k9mail.core.android.common.contact.ContactRepository
 import app.k9mail.core.ui.legacy.designsystem.atom.icon.Icons
-import com.fsck.k9.activity.misc.ContactPicture
+import app.k9mail.legacy.message.controller.MessageReference
+import com.fsck.k9.contacts.ContactPictureLoader
 import com.fsck.k9.mail.Address
 import com.fsck.k9.ui.R
 import com.fsck.k9.view.RecipientSelectView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import net.thunderbird.core.preference.avatar.SenderAvatarImage
+import net.thunderbird.core.preference.avatar.SenderAvatarRequest
+import net.thunderbird.core.preference.avatar.SenderAvatarResolution
+import net.thunderbird.core.preference.avatar.SenderAvatarResolver
+import net.thunderbird.core.preference.avatar.SenderAvatarSettings
+import net.thunderbird.core.preference.avatar.SenderAvatarSource
+import net.thunderbird.core.preference.avatar.SenderAvatarSurface
+import net.thunderbird.core.preference.avatar.SenderMessageIdentity
+import net.thunderbird.core.preference.avatar.SenderVerificationResult
 
-class K9NotificationResourceProvider(private val context: Context) : NotificationResourceProvider {
+class K9NotificationResourceProvider(
+    private val context: Context,
+    private val contactRepository: ContactRepository,
+    private val contactPictureLoader: ContactPictureLoader,
+    private val senderAvatarResolver: SenderAvatarResolver,
+) : NotificationResourceProvider {
     override val iconWarning: Int = Icons.Outlined.Warning
     override val iconMarkAsRead: Int = Icons.Outlined.MarkEmailRead
     override val iconDelete: Int = Icons.Outlined.Delete
@@ -47,8 +63,45 @@ class K9NotificationResourceProvider(private val context: Context) : Notificatio
     override fun authenticationErrorBody(accountName: String): String =
         context.getString(R.string.notification_authentication_error_text, accountName)
 
-    override suspend fun avatar(address: Address): Bitmap? = withContext(Dispatchers.IO) {
-        ContactPicture.getContactPictureLoader().getContactPicture(RecipientSelectView.Recipient(address))
+    override suspend fun avatar(
+        address: Address,
+        messageReference: MessageReference,
+        settings: SenderAvatarSettings,
+    ): Bitmap? = withContext(Dispatchers.IO) {
+        val contactPhotoUri = contactRepository.getPhotoUri(address.address)
+        val resolution = senderAvatarResolver.resolve(
+            SenderAvatarRequest(
+                message = SenderMessageIdentity(
+                    accountId = messageReference.accountUuid,
+                    folderId = messageReference.folderId.toString(),
+                    messageId = messageReference.uid,
+                ),
+                surface = SenderAvatarSurface.NOTIFICATION,
+                settings = settings,
+                contactImage = contactPhotoUri?.let { SenderAvatarImage(it.toString()) },
+                verifiedBrandImage = null,
+                monogram = address.personal ?: address.address,
+                verification = SenderVerificationResult.NotChecked,
+            ),
+        )
+
+        resolution.toBitmap(address)
+    }
+
+    private fun SenderAvatarResolution.toBitmap(address: Address): Bitmap? = when (this) {
+        SenderAvatarResolution.Hidden -> null
+        is SenderAvatarResolution.Visible -> when (val avatarSource = source) {
+            is SenderAvatarSource.Contact -> {
+                val recipient = RecipientSelectView.Recipient(address).apply {
+                    photoThumbnailUri = android.net.Uri.parse(avatarSource.image.key)
+                }
+                contactPictureLoader.getContactPicture(recipient)
+            }
+            is SenderAvatarSource.Monogram,
+            SenderAvatarSource.Generic,
+            -> contactPictureLoader.getContactPicture(RecipientSelectView.Recipient(address))
+            is SenderAvatarSource.VerifiedBrand -> null
+        }
     }
 
     override fun notifyErrorTitle(): String = context.getString(R.string.notification_notify_error_title)

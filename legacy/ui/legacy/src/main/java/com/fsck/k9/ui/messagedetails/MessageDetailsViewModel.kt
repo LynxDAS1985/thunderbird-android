@@ -17,6 +17,7 @@ import com.fsck.k9.mailstore.CryptoResultAnnotation
 import com.fsck.k9.mailstore.MessageDate
 import com.fsck.k9.mailstore.MessageRepository
 import com.fsck.k9.ui.R
+import com.fsck.k9.ui.messageview.MessageViewSenderAvatarResolver
 import com.fsck.k9.view.MessageCryptoDisplayStatus
 import java.text.DateFormat
 import java.util.Locale
@@ -43,6 +44,7 @@ internal class MessageDetailsViewModel(
     private val accountManager: LegacyAccountDtoManager,
     private val participantFormatter: MessageDetailsParticipantFormatter,
     private val folderNameFormatter: FolderNameFormatter,
+    private val senderAvatarResolver: MessageViewSenderAvatarResolver,
 ) : ViewModel() {
     private val dateFormat = DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.MEDIUM, Locale.getDefault())
 
@@ -83,12 +85,12 @@ internal class MessageDetailsViewModel(
                 val messageDetailsUi = MessageDetailsUi(
                     date = buildDisplayDate(messageDetails.date),
                     cryptoDetails = cryptoResult?.toCryptoDetails(),
-                    from = messageDetails.from.toParticipants(account),
-                    sender = senderList.toParticipants(account),
-                    replyTo = messageDetails.replyTo.toParticipants(account),
-                    to = messageDetails.to.toParticipants(account),
-                    cc = messageDetails.cc.toParticipants(account),
-                    bcc = messageDetails.bcc.toParticipants(account),
+                    from = messageDetails.from.toParticipants(account, messageReference, ParticipantRole.FROM),
+                    sender = senderList.toParticipants(account, messageReference, ParticipantRole.SENDER),
+                    replyTo = messageDetails.replyTo.toParticipants(account, messageReference, ParticipantRole.REPLY_TO),
+                    to = messageDetails.to.toParticipants(account, messageReference, ParticipantRole.TO),
+                    cc = messageDetails.cc.toParticipants(account, messageReference, ParticipantRole.CC),
+                    bcc = messageDetails.bcc.toParticipants(account, messageReference, ParticipantRole.BCC),
                     folder = folder?.toFolderInfo(),
                 )
 
@@ -125,7 +127,11 @@ internal class MessageDetailsViewModel(
         )
     }
 
-    private fun List<Address>.toParticipants(account: LegacyAccountDto): List<Participant> {
+    private fun List<Address>.toParticipants(
+        account: LegacyAccountDto,
+        messageReference: MessageReference,
+        role: ParticipantRole,
+    ): List<Participant> {
         return this.map { address ->
             val displayName = participantFormatter.getDisplayName(address, account)
             val emailAddress = address.address
@@ -134,6 +140,11 @@ internal class MessageDetailsViewModel(
                 displayName = displayName,
                 emailAddress = emailAddress,
                 contactLookupUri = getContactLookupUri(emailAddress),
+                senderAvatar = if (role.supportsSenderBrand) {
+                    senderAvatarResolver.resolve(messageReference, address)
+                } else {
+                    null
+                },
             )
         }
     }

@@ -33,6 +33,8 @@ import net.thunderbird.core.android.testing.RobolectricTest
 import net.thunderbird.core.featureflag.FeatureFlagKey
 import net.thunderbird.core.featureflag.FeatureFlagProvider
 import net.thunderbird.core.featureflag.FeatureFlagResult
+import net.thunderbird.core.featureflag.keys.GeneratedFeatureFlagKey
+import net.thunderbird.core.preference.avatar.SenderAvatarResolution
 import net.thunderbird.core.preference.display.visualSettings.message.list.MessageListDateTimeFormat
 import net.thunderbird.core.preference.display.visualSettings.message.list.UiDensity
 import net.thunderbird.core.ui.theme.api.FeatureThemeProvider
@@ -42,6 +44,8 @@ import net.thunderbird.feature.account.storage.profile.AvatarTypeDto
 import net.thunderbird.feature.account.storage.profile.ProfileDto
 import org.junit.Test
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import org.robolectric.Robolectric
 
 private const val SOME_ACCOUNT_UUID = "6b84207b-25de-4dab-97c3-953bbf03fec6"
@@ -57,6 +61,27 @@ class MessageListAdapterTest : RobolectricTest() {
 
     val contactsPictureLoader: ContactPictureLoader = mock()
     val listItemListener: MessageListItemActionListener = mock()
+    val senderAvatarResolver: MessageListSenderAvatarResolver = mock()
+
+    @Test
+    fun xmlMessageItem_resolvesAvatarForBoundMessage() {
+        val item = createMessageListItem(messageUid = "message-42")
+        val adapter = createAdapter(showContactPicture = true)
+
+        adapter.createAndBindView(item)
+
+        verify(senderAvatarResolver).resolve(item, showAvatar = true)
+    }
+
+    @Test
+    fun composeMessageItem_resolvesAvatarForBoundMessage() {
+        val item = createMessageListItem(messageUid = "message-42")
+        val adapter = createAdapter(showContactPicture = true, useComposeMessageItems = true)
+
+        adapter.createAndBindView(item)
+
+        verify(senderAvatarResolver).resolve(item, showAvatar = true)
+    }
 
     @Test
     fun withShowAccountIndicator_shouldShowAccountIndicator() {
@@ -416,6 +441,7 @@ class MessageListAdapterTest : RobolectricTest() {
         showAccountIndicator: Boolean = false,
         density: UiDensity = UiDensity.Default,
         dateTimeFormat: MessageListDateTimeFormat = DATE_TIME_FORMAT,
+        useComposeMessageItems: Boolean = false,
     ): MessageListAdapter {
         val appearance = MessageListAppearance(
             fontSizes,
@@ -430,6 +456,9 @@ class MessageListAdapterTest : RobolectricTest() {
             dateTimeFormat = dateTimeFormat,
         )
 
+        whenever(senderAvatarResolver.resolve(org.mockito.kotlin.any(), org.mockito.kotlin.any()))
+            .thenReturn(SenderAvatarResolution.Hidden)
+
         @OptIn(ExperimentalTime::class)
         return MessageListAdapter(
             theme = context.theme,
@@ -439,9 +468,8 @@ class MessageListAdapterTest : RobolectricTest() {
             listItemListener = listItemListener,
             appearance = { appearance },
             themeProvider = FakeThemeProvider(),
-            featureFlagProvider = FakeFeatureFlagProvider(),
-            avatarMonogramCreator = mock(),
-            contactRepository = mock(),
+            featureFlagProvider = FakeFeatureFlagProvider(useComposeMessageItems),
+            senderAvatarResolver = senderAvatarResolver,
             formatDate = { "12:34" },
         )
     }
@@ -607,8 +635,15 @@ class MessageListAdapterTest : RobolectricTest() {
         }
     }
 
-    private class FakeFeatureFlagProvider : FeatureFlagProvider {
-        // Disabled as the test is primarily concerned with the XML based UI
-        override fun provide(key: FeatureFlagKey): FeatureFlagResult = FeatureFlagResult.Disabled
+    private class FakeFeatureFlagProvider(
+        private val useComposeMessageItems: Boolean = false,
+    ) : FeatureFlagProvider {
+        override fun provide(key: FeatureFlagKey): FeatureFlagResult {
+            return if (key == GeneratedFeatureFlagKey.USE_COMPOSE_FOR_MESSAGE_LIST_ITEMS && useComposeMessageItems) {
+                FeatureFlagResult.Enabled
+            } else {
+                FeatureFlagResult.Disabled
+            }
+        }
     }
 }

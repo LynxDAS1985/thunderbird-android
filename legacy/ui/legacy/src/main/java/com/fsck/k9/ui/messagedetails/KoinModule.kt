@@ -16,6 +16,7 @@ val messageDetailsUiModule = module {
             accountManager = get(),
             participantFormatter = get(),
             folderNameFormatter = get(),
+            senderAvatarResolver = get(),
         )
     }
     factory { ContactSettingsProvider(messageListPreferencesManager = get()) }

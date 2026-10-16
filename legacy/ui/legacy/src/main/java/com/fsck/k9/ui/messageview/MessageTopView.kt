@@ -16,6 +16,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import app.k9mail.core.android.common.contact.ContactRepository
+import app.k9mail.legacy.message.controller.MessageReference
 import com.fsck.k9.mail.Message
 import com.fsck.k9.mail.Part
 import com.fsck.k9.mailstore.AttachmentViewInfo
@@ -47,6 +48,7 @@ class MessageTopView(
     private val contactRepository: ContactRepository by inject()
     private val visualSettingsPrefManager: DisplayVisualSettingsPreferenceManager by inject()
     private val animationManager: AnimationManager by inject()
+    private val senderAvatarResolver: MessageViewSenderAvatarResolver by inject()
 
     private lateinit var layoutInflater: LayoutInflater
 
@@ -259,7 +261,16 @@ class MessageTopView(
         }
     }
 
-    fun setHeaders(message: Message?, account: LegacyAccountDto?, showStar: Boolean) {
+    fun setHeaders(
+        message: Message,
+        account: LegacyAccountDto,
+        messageReference: MessageReference,
+        showStar: Boolean,
+    ) {
+        val fromAddress = message.from.firstOrNull()
+        val senderAvatar = fromAddress?.let { senderAvatarResolver.resolve(messageReference, it) }
+            ?: MessageViewSenderAvatar.Hidden
+        messageHeaderView.setSenderAvatar(senderAvatar)
         messageHeaderView.populate(message, account, showStar, showAccountIndicator)
         messageHeaderView.visibility = VISIBLE
     }

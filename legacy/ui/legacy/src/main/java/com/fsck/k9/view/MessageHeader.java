@@ -21,7 +21,6 @@ import app.k9mail.core.ui.legacy.designsystem.atom.icon.Icons;
 import app.k9mail.legacy.di.DI;
 import com.fsck.k9.FontSizes;
 import com.fsck.k9.K9;
-import com.fsck.k9.activity.misc.ContactPicture;
 import com.fsck.k9.contacts.ContactPictureLoader;
 import com.fsck.k9.helper.ClipboardManager;
 import com.fsck.k9.helper.MessageHelper;
@@ -33,6 +32,7 @@ import com.fsck.k9.ui.helper.RelativeDateTimeFormatter;
 import com.fsck.k9.ui.messageview.DisplayRecipients;
 import com.fsck.k9.ui.messageview.DisplayRecipientsExtractor;
 import com.fsck.k9.ui.messageview.MessageHeaderClickListener;
+import com.fsck.k9.ui.messageview.MessageViewSenderAvatar;
 import com.fsck.k9.ui.messageview.MessageViewRecipientFormatter;
 import com.fsck.k9.ui.messageview.RecipientNamesView;
 import com.google.android.material.chip.Chip;
@@ -40,7 +40,6 @@ import com.google.android.material.textview.MaterialTextView;
 import net.thunderbird.core.android.account.LegacyAccountDto;
 import net.thunderbird.core.common.mail.Flag;
 import net.thunderbird.core.preference.display.visualSettings.message.list.MessageListDateTimeFormat;
-import net.thunderbird.core.preference.display.visualSettings.message.list.MessageListPreferencesManager;
 import net.thunderbird.feature.mail.message.reader.api.domain.ReplyAction;
 import net.thunderbird.feature.mail.message.reader.api.domain.ReplyActions;
 import net.thunderbird.feature.mail.message.reader.api.strategy.ReplyActionStrategy;
@@ -50,8 +49,6 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
     private static final int DEFAULT_SUBJECT_LINES = 3;
 
     private final MessageViewRecipientFormatter recipientFormatter = DI.get(MessageViewRecipientFormatter.class);
-    private final MessageListPreferencesManager messageListPreferencesManager =
-        DI.get(MessageListPreferencesManager.class);
     private final ReplyActionStrategy<LegacyAccountDto, Message> replyActionStrategy = DI.get(ReplyActionStrategy.class);
     private final MessageHelper messageHelper = DI.get(MessageHelper.class);
     private final FontSizes fontSizes = K9.getFontSizes();
@@ -225,18 +222,6 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
             fromAddress = fromAddresses[0];
         }
 
-        if (messageListPreferencesManager.getConfig().isShowContactPicture()) {
-            contactPictureView.setVisibility(View.VISIBLE);
-            if (fromAddress != null) {
-                ContactPictureLoader contactsPictureLoader = ContactPicture.getContactPictureLoader();
-                contactsPictureLoader.setContactPicture(contactPictureView, fromAddress);
-            } else {
-                contactPictureView.setImageResource(Icons.Outlined.AccountCircle);
-            }
-        } else {
-            contactPictureView.setVisibility(View.GONE);
-        }
-
         CharSequence from = messageHelper.getSenderDisplayName(fromAddress);
         fromView.setText(from);
 
@@ -263,6 +248,22 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         setReplyActions(message, account);
 
         setVisibility(View.VISIBLE);
+    }
+
+    public void setSenderAvatar(@NonNull MessageViewSenderAvatar senderAvatar) {
+        if (senderAvatar instanceof MessageViewSenderAvatar.Hidden) {
+            contactPictureView.setVisibility(View.GONE);
+            return;
+        }
+
+        MessageViewSenderAvatar.Visible visible = (MessageViewSenderAvatar.Visible) senderAvatar;
+        contactPictureView.setVisibility(View.VISIBLE);
+        ContactPictureLoader contactPictureLoader = DI.get(ContactPictureLoader.class);
+        if (visible.getImageUri() != null) {
+            contactPictureLoader.setContactPicture(contactPictureView, visible.getImageUri());
+        } else {
+            contactPictureLoader.setContactPicture(contactPictureView, visible.getFallbackAddress());
+        }
     }
 
     private void setRecipientNames(Message message, LegacyAccountDto account) {

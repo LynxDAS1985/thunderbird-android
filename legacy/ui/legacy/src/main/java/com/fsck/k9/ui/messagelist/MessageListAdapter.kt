@@ -11,7 +11,6 @@ import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
-import app.k9mail.core.android.common.contact.ContactRepository
 import app.k9mail.legacy.message.controller.MessageReference
 import com.fsck.k9.contacts.ContactPictureLoader
 import com.fsck.k9.ui.messagelist.item.BannerInlineListInAppNotificationViewHolder
@@ -24,7 +23,6 @@ import net.thunderbird.core.featureflag.FeatureFlagProvider
 import net.thunderbird.core.featureflag.FeatureFlagResult
 import net.thunderbird.core.featureflag.keys.GeneratedFeatureFlagKey
 import net.thunderbird.core.ui.theme.api.FeatureThemeProvider
-import net.thunderbird.feature.account.avatar.AvatarMonogramCreator
 import net.thunderbird.feature.notification.api.content.InAppNotification
 import net.thunderbird.feature.notification.api.ui.action.NotificationAction
 
@@ -45,8 +43,7 @@ class MessageListAdapter internal constructor(
     private val appearance: () -> MessageListAppearance,
     private val themeProvider: FeatureThemeProvider,
     private val featureFlagProvider: FeatureFlagProvider,
-    private val contactRepository: ContactRepository,
-    private val avatarMonogramCreator: AvatarMonogramCreator,
+    private val senderAvatarResolver: MessageListSenderAvatarResolver,
     private val formatDate: (Long) -> String,
 ) : RecyclerView.Adapter<MessageListViewHolder>() {
 
@@ -240,6 +237,7 @@ class MessageListAdapter internal constructor(
             appearance = appearance,
             res = res,
             contactsPictureLoader = contactsPictureLoader,
+            senderAvatarResolver = senderAvatarResolver,
             colors = colors,
             theme = theme,
             onClickListener = messageClickedListener,
@@ -252,8 +250,7 @@ class MessageListAdapter internal constructor(
         ComposableMessageViewHolder.create(
             context = parent.context,
             themeProvider = themeProvider,
-            contactRepository = contactRepository,
-            avatarMonogramCreator = avatarMonogramCreator,
+            senderAvatarResolver = senderAvatarResolver,
             onClick = { listItemListener.onMessageClicked(it) },
             onLongClick = { listItemListener.onToggleMessageSelection(it) },
             onFavouriteClick = { listItemListener.onToggleMessageFlag(it) },
