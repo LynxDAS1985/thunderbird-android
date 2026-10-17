@@ -26,13 +26,14 @@ internal class BimiDiskCache(
         val base = hash(key)
         val data = directory.resolve("$base.svg")
         val metadata = directory.resolve("$base.meta")
+        val rasterized = rasterizedPath(key)
         if (!Files.isRegularFile(data) || !Files.isRegularFile(metadata)) return null
         val fields = runCatching { Files.readString(metadata).trim().split(':').map(String::toLong) }.getOrNull()
-            ?.takeIf { it.size == 2 } ?: return remove(data, metadata)
-        if (fields[0] < 0 || fields[1] < fields[0]) return remove(data, metadata)
-        val bytes = runCatching { Files.readAllBytes(data) }.getOrNull() ?: return remove(data, metadata)
+            ?.takeIf { it.size == 2 } ?: return remove(data, metadata, rasterized)
+        if (fields[0] < 0 || fields[1] < fields[0]) return remove(data, metadata, rasterized)
+        val bytes = runCatching { Files.readAllBytes(data) }.getOrNull() ?: return remove(data, metadata, rasterized)
         Files.setLastModifiedTime(data, java.nio.file.attribute.FileTime.fromMillis(now()))
-        return Entry(data, bytes, expiresAt = fields[0], staleUntil = fields[1])
+        return Entry(data, rasterized, bytes, expiresAt = fields[0], staleUntil = fields[1])
     }
 
     fun write(key: String, bytes: ByteArray, ttlMillis: Long, staleMillis: Long): Entry {
@@ -40,6 +41,7 @@ internal class BimiDiskCache(
         val base = hash(key)
         val data = directory.resolve("$base.svg")
         val metadata = directory.resolve("$base.meta")
+        Files.deleteIfExists(rasterizedPath(key))
         atomicWrite(data, bytes)
         atomicWrite(metadata, "${now() + ttlMillis}:${now() + staleMillis}".toByteArray())
         trim()
@@ -61,7 +63,19 @@ internal class BimiDiskCache(
         trim()
     }
 
-    data class Entry(val path: Path, val bytes: ByteArray, val expiresAt: Long, val staleUntil: Long) {
+    fun writeRasterized(entry: Entry, png: ByteArray): Path {
+        atomicWrite(entry.rasterizedPath, png)
+        trim()
+        return entry.rasterizedPath
+    }
+
+    data class Entry(
+        val path: Path,
+        val rasterizedPath: Path,
+        val bytes: ByteArray,
+        val expiresAt: Long,
+        val staleUntil: Long,
+    ) {
         fun isFresh(now: Long) = now <= expiresAt
         fun isUsable(now: Long) = now <= staleUntil
     }
@@ -89,7 +103,11 @@ internal class BimiDiskCache(
                 .map { data -> data to directory.resolve(data.fileName.toString().removeSuffix(".svg") + ".meta") }
                 .filter { (_, metadata) -> Files.isRegularFile(metadata) }
                 .map { (data, metadata) ->
-                    CacheFiles(listOf(data, metadata), Files.getLastModifiedTime(data).toMillis())
+                    val png = directory.resolve(data.fileName.toString().removeSuffix(".svg") + ".png")
+                    CacheFiles(
+                        listOf(data, metadata, png).filter(Files::isRegularFile),
+                        Files.getLastModifiedTime(data).toMillis(),
+                    )
                 }
                 .toList()
         }
@@ -115,6 +133,7 @@ internal class BimiDiskCache(
             val counterpart = when {
                 name.endsWith(".svg") -> directory.resolve(name.removeSuffix(".svg") + ".meta")
                 name.endsWith(".meta") -> directory.resolve(name.removeSuffix(".meta") + ".svg")
+                name.endsWith(".png") -> directory.resolve(name.removeSuffix(".png") + ".svg")
                 name.endsWith(NEGATIVE_SUFFIX) -> file
                 else -> null
             }
@@ -151,6 +170,8 @@ internal class BimiDiskCache(
     }
 
     private fun negativePath(key: String): Path = directory.resolve("${hash(key)}$NEGATIVE_SUFFIX")
+
+    private fun rasterizedPath(key: String): Path = directory.resolve("${hash(key)}.png")
 
     private fun hash(value: String): String = MessageDigest.getInstance("SHA-256")
         .digest(value.toByteArray()).joinToString("") { "%02x".format(it) }

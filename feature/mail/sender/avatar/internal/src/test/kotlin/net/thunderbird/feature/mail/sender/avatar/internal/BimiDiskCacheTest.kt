@@ -59,6 +59,18 @@ class BimiDiskCacheTest {
     }
 
     @Test
+    fun `writing replacement SVG removes stale rasterized image`() {
+        val directory = Files.createTempDirectory("bimi-cache-test")
+        val testSubject = BimiDiskCache(directory, now = { 100L })
+        val first = testSubject.write("key", byteArrayOf(1), ttlMillis = 10, staleMillis = 20)
+        testSubject.writeRasterized(first, byteArrayOf(9))
+
+        val replacement = testSubject.write("key", byteArrayOf(2), ttlMillis = 10, staleMillis = 20)
+
+        assertThat(Files.exists(replacement.rasterizedPath)).isFalse()
+    }
+
+    @Test
     fun `startup removes expired and malformed negative entries`() {
         val directory = Files.createTempDirectory("bimi-cache-test")
         val bimiDirectory = directory.resolve("bimi/v1")

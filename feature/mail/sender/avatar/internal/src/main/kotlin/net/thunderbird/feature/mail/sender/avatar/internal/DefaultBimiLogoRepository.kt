@@ -8,6 +8,8 @@ import net.thunderbird.core.preference.avatar.SenderVerificationResult
 import net.thunderbird.feature.mail.sender.avatar.BimiLogoRepository
 import net.thunderbird.feature.mail.sender.avatar.BimiLogoRequest
 import net.thunderbird.feature.mail.sender.avatar.BimiLogoResult
+import net.thunderbird.feature.mail.sender.avatar.BimiSvgRasterizationResult
+import net.thunderbird.feature.mail.sender.avatar.BimiSvgRasterizer
 
 internal class DefaultBimiLogoRepository(
     cacheDirectory: Path,
@@ -15,6 +17,7 @@ internal class DefaultBimiLogoRepository(
     private val transport: BimiTransport = SafeBimiTransport(),
     private val validator: StrictSvgValidator = StrictSvgValidator(),
     private val now: () -> Long = System::currentTimeMillis,
+    private val rasterizer: BimiSvgRasterizer = AndroidBimiSvgRasterizer(),
 ) : BimiLogoRepository {
     private val cache = BimiDiskCache(cacheDirectory, now)
 
@@ -61,7 +64,7 @@ internal class DefaultBimiLogoRepository(
         val key = "$domain|$uri"
         val cached = cache.read(key)
         if (cached?.isFresh(now()) == true && validator.isValid(cached.bytes)) {
-            return available(cached.path, mayShowShield(request), BimiLogoResult.Source.FRESH_CACHE)
+            return rasterized(cached, mayShowShield(request), BimiLogoResult.Source.FRESH_CACHE)
         }
 
         return try {
@@ -74,7 +77,7 @@ internal class DefaultBimiLogoRepository(
             if (!validator.isValid(response.body)) return staleOrRejected(cached, BimiLogoResult.Reason.INVALID_SVG)
             val ttl = record.ttlMillis.coerceIn(MIN_TTL_MILLIS, MAX_TTL_MILLIS)
             val entry = cache.write(key, response.body, ttl, STALE_TTL_MILLIS)
-            available(entry.path, mayShowShield(request), BimiLogoResult.Source.NETWORK)
+            rasterized(entry, mayShowShield(request), BimiLogoResult.Source.NETWORK)
         } catch (exception: BimiTransportException.BlockedAddress) {
             staleOrRejected(cached, BimiLogoResult.Reason.BLOCKED_ADDRESS)
         } catch (exception: BimiTransportException.InvalidUrl) {
@@ -94,16 +97,36 @@ internal class DefaultBimiLogoRepository(
 
     private fun staleOrRejected(cached: BimiDiskCache.Entry?, reason: BimiLogoResult.Reason): BimiLogoResult =
         if (cached?.isUsable(now()) == true && validator.isValid(cached.bytes)) {
-            available(cached.path, false, BimiLogoResult.Source.STALE_CACHE)
+            rasterized(cached, false, BimiLogoResult.Source.STALE_CACHE)
         } else {
             rejected(reason)
         }
 
-    private fun available(path: Path, shield: Boolean, source: BimiLogoResult.Source) = BimiLogoResult.Available(
-        image = SenderAvatarImage(path.toUri().toString()),
-        mayShowVerifiedShield = shield,
-        source = source,
-    )
+    private fun rasterized(
+        entry: BimiDiskCache.Entry,
+        shield: Boolean,
+        source: BimiLogoResult.Source,
+    ): BimiLogoResult {
+        if (java.nio.file.Files.isRegularFile(entry.rasterizedPath)) {
+            return available(entry.rasterizedPath, shield, source)
+        }
+
+        return when (val result = rasterizer.rasterize(entry.bytes, RASTER_SIZE_PX)) {
+            is BimiSvgRasterizationResult.Success -> {
+                val path = cache.writeRasterized(entry, result.png)
+                available(path, shield, source)
+            }
+
+            is BimiSvgRasterizationResult.Rejected -> rejected(BimiLogoResult.Reason.RASTERIZATION_FAILED)
+        }
+    }
+
+    private fun available(path: Path, shield: Boolean, source: BimiLogoResult.Source) =
+        BimiLogoResult.Available(
+            image = SenderAvatarImage(path.toUri().toString()),
+            mayShowVerifiedShield = shield,
+            source = source,
+        )
 
     private fun rejected(reason: BimiLogoResult.Reason) = BimiLogoResult.Rejected(reason)
 
@@ -122,5 +145,6 @@ internal class DefaultBimiLogoRepository(
         const val MAX_TTL_MILLIS = 24 * 60 * 60 * 1000L
         const val STALE_TTL_MILLIS = 7 * 24 * 60 * 60 * 1000L
         const val NEGATIVE_TTL_MILLIS = 15 * 60 * 1000L
+        const val RASTER_SIZE_PX = 128
     }
 }

@@ -38,6 +38,7 @@ sealed interface BimiLogoResult {
         NETWORK_ERROR,
         INVALID_RESPONSE,
         INVALID_SVG,
+        RASTERIZATION_FAILED,
         CACHE_ERROR,
     }
 }

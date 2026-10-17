@@ -73,7 +73,11 @@ class DefaultDmarcVerifierTest {
     @Test
     fun `rejects duplicate DMARC results`() {
         val result = testSubject.verify(
-            request(headers = listOf("auth.example; dmarc=pass header.from=sender.example; dmarc=pass header.from=x.example")),
+            request(
+                headers = listOf(
+                    "auth.example; dmarc=pass header.from=sender.example; dmarc=pass header.from=x.example",
+                ),
+            ),
         )
 
         assertThat(result).isEqualTo(SenderVerificationResult.NotChecked)
@@ -81,7 +85,9 @@ class DefaultDmarcVerifierTest {
 
     @Test
     fun `rejects malformed or folded header value`() {
-        val result = testSubject.verify(request(headers = listOf("auth.example;\r\n dmarc=pass header.from=sender.example")))
+        val result = testSubject.verify(
+            request(headers = listOf("auth.example;\r\n dmarc=pass header.from=sender.example")),
+        )
 
         assertThat(result).isEqualTo(SenderVerificationResult.NotChecked)
     }

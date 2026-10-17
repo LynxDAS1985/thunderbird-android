@@ -84,3 +84,11 @@ Commit отложен до успешных обязательных прове�
 **Финальная сборка 2026-10-16.** `:app-thunderbird:assembleFullDebug` завершился успешно за 10 минут 53 секунды: 2189 задач. В `distrib/thunderbird-full-debug.apk` помещён файл размером 48 413 235 байт, SHA-256 `959D4256EEF6E96F3972B72BC43A54E31C0621FF59EF94DFA741EEF50BC8F658`. `apksigner` подтвердил схемы v1/v2 и сертификат `Android Debug`. APK пригоден для тестов, но не для коммерческой публикации.
 
 **Git.** Код resolver, Android-адаптеры, безопасный BIMI-модуль, тесты и основная документация сохранены коммитом `11effa1` (`Connect sender avatar resolver and add safe BIMI loader`). Отправка выполняется в ветку `custom-brand-thunderbird-24.0` личного remote `personal`.
+
+## 2026-10-17: DMARC, SVG→PNG и отрицательный BIMI-кэш
+
+**Что и зачем.** Добавлены строгий `DmarcVerifier`, отрицательный кэш отсутствующих/неверных BIMI-записей и безопасная растеризация SVG. BIMI API/internal включены в `legacy:core`, а `DmarcVerifier` и `BimiLogoRepository` зарегистрированы в Koin. Это помещает механизм в APK, сохраняя запрет щита до появления доверенных данных конкретного аккаунта.
+
+**Как работает и откат.** DMARC требует первый `Authentication-Results`, доверенный `authserv-id`, ровно один `dmarc=pass`, совпадение `header.from` и From. Кэш ошибок действует 15 минут и не запоминает сетевой сбой. Валидный SVG преобразуется в PNG 128×128, записывается атомарно и удаляется при замене SVG. Пользовательский путь остаётся выключаемым `enable_sender_avatar_settings`; удалять настройки при откате нельзя.
+
+**Проверка.** `:feature:mail:sender:avatar:internal:testDebugUnitTest` — 38 тестов успешно; `:core:preference:impl:jvmTest`, полный `spotlessCheck`, `:legacy:core:compileDebugKotlin` и `:app-thunderbird:assembleFullDebug` — успешно. Полный запуск выполнил 3438 задач за 10 минут 26 секунд. Для обхода старой Windows-ошибки AIDL Gradle cache доступен через ASCII junction `C:\Projects\Mail\.tools\gradle-home`; это локальная настройка вне Git. APK скопирован в `distrib/thunderbird-full-debug.apk`: 48 577 151 байт, SHA-256 `3EFDBA3219EAEB42231BA0C7A7E217111AE7E863AB941FA0089D03CC9132870D`; `apksigner` подтвердил debug-подпись v1/v2. Телефонная проверка не выполнена: устройство не подключено.

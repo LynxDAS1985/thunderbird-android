@@ -1,5 +1,6 @@
 package com.fsck.k9.preferences
 
+import android.content.Context
 import com.fsck.k9.Preferences
 import kotlin.time.ExperimentalTime
 import net.thunderbird.core.android.account.LegacyAccountDtoManager
@@ -11,9 +12,13 @@ import net.thunderbird.core.preference.PreferenceChangeBroker
 import net.thunderbird.core.preference.PreferenceChangePublisher
 import net.thunderbird.core.preference.avatar.DefaultSenderAvatarSettingsPreferenceManager
 import net.thunderbird.core.preference.avatar.DefaultSenderAvatarResolver
+import net.thunderbird.core.preference.avatar.DefaultDmarcVerifier
+import net.thunderbird.core.preference.avatar.DmarcVerifier
 import net.thunderbird.core.preference.avatar.SenderAvatarResolver
 import net.thunderbird.core.preference.avatar.SenderAvatarSettingsPreferenceManager
 import net.thunderbird.core.preference.debugging.DebuggingSettingsPreferenceManager
+import net.thunderbird.feature.mail.sender.avatar.BimiLogoRepository
+import net.thunderbird.feature.mail.sender.avatar.internal.BimiLogoRepositoryFactory
 import net.thunderbird.core.preference.debugging.DefaultDebuggingSettingsPreferenceManager
 import net.thunderbird.core.preference.display.DefaultDisplaySettingsPreferenceManager
 import net.thunderbird.core.preference.display.DisplaySettingsPreferenceManager
@@ -135,6 +140,10 @@ val preferencesModule = module {
         )
     }
     single<SenderAvatarResolver> { DefaultSenderAvatarResolver() }
+    single<DmarcVerifier> { DefaultDmarcVerifier() }
+    single<BimiLogoRepository> {
+        BimiLogoRepositoryFactory.create(get<Context>().cacheDir.toPath())
+    }
     single<NetworkSettingsPreferenceManager> {
         DefaultNetworkSettingsPreferenceManager(
             logger = get(),

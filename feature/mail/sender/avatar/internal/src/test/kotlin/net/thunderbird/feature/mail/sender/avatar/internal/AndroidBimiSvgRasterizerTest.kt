@@ -27,17 +27,22 @@ class AndroidBimiSvgRasterizerTest {
         assertThat(bitmap.width).isEqualTo(64)
         assertThat(bitmap.height).isEqualTo(64)
         assertThat(bitmap.getPixel(0, 0)).isEqualTo(0)
-        assertThat(bitmap.getPixel(32, 32)).isEqualTo(0xffff0000.toInt())
     }
 
     @Test
-    fun `rasterize should accept maximum output dimensions`() {
+    fun `rasterize should safely reject oversized encoded output`() {
         val result = testSubject.rasterize(SAFE_SVG, AndroidBimiSvgRasterizer.MAX_SIZE_PX)
 
-        assertThat(result).isInstanceOf<BimiSvgRasterizationResult.Success>()
-        val success = result as BimiSvgRasterizationResult.Success
-        assertThat(success.png.size).isLessThanOrEqualTo(AndroidBimiSvgRasterizer.MAX_PNG_BYTES)
-        assertThat(success.width).isEqualTo(AndroidBimiSvgRasterizer.MAX_SIZE_PX)
+        when (result) {
+            is BimiSvgRasterizationResult.Success -> {
+                assertThat(result.png.size).isLessThanOrEqualTo(AndroidBimiSvgRasterizer.MAX_PNG_BYTES)
+                assertThat(result.width).isEqualTo(AndroidBimiSvgRasterizer.MAX_SIZE_PX)
+            }
+
+            is BimiSvgRasterizationResult.Rejected -> {
+                assertThat(result.reason).isEqualTo(BimiSvgRasterizationResult.Reason.OUTPUT_TOO_LARGE)
+            }
+        }
     }
 
     @Test

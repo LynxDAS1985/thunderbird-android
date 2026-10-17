@@ -10,6 +10,8 @@ import net.thunderbird.core.preference.avatar.SenderVerificationMethod
 import net.thunderbird.core.preference.avatar.SenderVerificationResult
 import net.thunderbird.feature.mail.sender.avatar.BimiLogoRequest
 import net.thunderbird.feature.mail.sender.avatar.BimiLogoResult
+import net.thunderbird.feature.mail.sender.avatar.BimiSvgRasterizationResult
+import net.thunderbird.feature.mail.sender.avatar.BimiSvgRasterizer
 import org.junit.Test
 
 class DefaultBimiLogoRepositoryTest {
@@ -38,6 +40,7 @@ class DefaultBimiLogoRepositoryTest {
         assertThat(available.source).isEqualTo(BimiLogoResult.Source.NETWORK)
         assertThat(available.mayShowVerifiedShield).isFalse()
         assertThat(available.image.key.startsWith("file:")).isTrue()
+        assertThat(available.image.key.endsWith(".png")).isTrue()
     }
 
     @Test
@@ -81,6 +84,30 @@ class DefaultBimiLogoRepositoryTest {
         val available = result as BimiLogoResult.Available
         assertThat(available.source).isEqualTo(BimiLogoResult.Source.FRESH_CACHE)
         assertThat(failingTransport.calls).isEqualTo(0)
+    }
+
+    @Test
+    fun `uses cached PNG without rendering SVG again`() {
+        val directory = Files.createTempDirectory("bimi-cache-test")
+        val rasterizer = FakeRasterizer()
+        repository(FakeTransport(response()), directory, rasterizer = rasterizer).load(request())
+
+        repository(FakeTransport(response()), directory, rasterizer = rasterizer).load(request())
+
+        assertThat(rasterizer.calls).isEqualTo(1)
+    }
+
+    @Test
+    fun `rejects logo when safe rasterization fails`() {
+        val rasterizer = FakeRasterizer(
+            BimiSvgRasterizationResult.Rejected(
+                BimiSvgRasterizationResult.Reason.RENDERING_FAILED,
+            ),
+        )
+
+        val result = repository(FakeTransport(response()), rasterizer = rasterizer).load(request())
+
+        assertThat(result).isEqualTo(BimiLogoResult.Rejected(BimiLogoResult.Reason.RASTERIZATION_FAILED))
     }
 
     @Test
@@ -138,7 +165,8 @@ class DefaultBimiLogoRepositoryTest {
         directory: java.nio.file.Path = Files.createTempDirectory("bimi-cache-test"),
         now: () -> Long = { 1_000L },
         resolver: FakeRecordResolver = FakeRecordResolver(),
-    ) = DefaultBimiLogoRepository(directory, resolver, transport, StrictSvgValidator(), now)
+        rasterizer: BimiSvgRasterizer = FakeRasterizer(),
+    ) = DefaultBimiLogoRepository(directory, resolver, transport, StrictSvgValidator(), now, rasterizer)
 
     private fun request(
         verification: SenderVerificationResult = SenderVerificationResult.Verified(
@@ -174,6 +202,21 @@ class DefaultBimiLogoRepositoryTest {
         var calls = 0
 
         override fun lookup(domain: String, selector: String): BimiRecordLookupResult {
+            calls++
+            return result
+        }
+    }
+
+    private class FakeRasterizer(
+        private val result: BimiSvgRasterizationResult = BimiSvgRasterizationResult.Success(
+            png = byteArrayOf(1, 2, 3),
+            width = 128,
+            height = 128,
+        ),
+    ) : BimiSvgRasterizer {
+        var calls = 0
+
+        override fun rasterize(svg: ByteArray, sizePx: Int): BimiSvgRasterizationResult {
             calls++
             return result
         }

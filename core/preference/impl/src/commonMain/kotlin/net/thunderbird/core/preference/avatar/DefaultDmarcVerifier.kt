@@ -76,23 +76,28 @@ private object AuthenticationResultsParser {
                     current.append(character)
                     escaped = false
                 }
+
                 character == '\\' && commentDepth > 0 -> {
                     current.append(character)
                     escaped = true
                 }
+
                 character == '(' -> {
                     commentDepth++
                     current.append(character)
                 }
+
                 character == ')' -> {
                     if (commentDepth == 0) return null
                     commentDepth--
                     current.append(character)
                 }
+
                 character == ';' && commentDepth == 0 -> {
                     sections += current.toString()
                     current.clear()
                 }
+
                 else -> current.append(character)
             }
         }
