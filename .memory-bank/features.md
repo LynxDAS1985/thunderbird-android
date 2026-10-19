@@ -1,5 +1,7 @@
 # Реализованное
 
+**Текущая версия / Current version**: 24.0 (versionCode 33)
+
 ## 2026-10-09: Организация разработки
 
 Подготовлены русские инструкции `CLAUDE.md`, карта памяти, документы архитектуры, тестирования, выпуска и брендинга, журналы изменений и задач.
@@ -43,3 +45,13 @@
 BIMI теперь кэширует отсутствие/ошибочную запись на 15 минут, но повторяет запрос после сетевой ошибки. Допустимый SVG преобразуется AndroidSVG в локальный PNG с ограничениями размера; UI не получает исходный SVG. При обновлении SVG старый PNG удаляется. BIMI и DMARC зарегистрированы в DI приложения, но передача заголовков аккаунта и PNG в пользовательский resolver ещё не подключена.
 
 Проверено 38 тестами BIMI/SVG, JVM-тестами DMARC, полным `spotlessCheck`, компиляцией `legacy:core` и сборкой Full Debug APK. `distrib/thunderbird-full-debug.apk`: 48 577 151 байт, SHA-256 `3EFDBA3219EAEB42231BA0C7A7E217111AE7E863AB941FA0089D03CC9132870D`; debug-подпись v1/v2 подтверждена. Основной коммит: `3ef8832`. Телефонная проверка ожидается.
+
+## 2026-10-19: Устранение дефектов аудита, ADR-0009 и сквозная интеграция
+
+Устранены все 13 критических дефектов (CRIT-01..13) и 8 рисков (RISK-01..08) независимого аудита. Восстановлена архитектурная модульность (ADR-0009): `legacy:core` отвязан от `:internal`, регистрация фабрики перенесена в `app-common` (`FeatureMailModule.kt`). Версия настроек `Settings.VERSION` повышена до 112 с добавлением `GeneralSettingsUpgraderTo112` для безопасной миграции резервных копий.
+
+Реализована потокобезопасность `BimiDiskCache`, negative cache при `NX_DOMAIN` (15 минут), поддержка многострочных TXT (RFC 1035), self-asserted BIMI (`a=;`), градиентов `url(#id)` в `StrictSvgValidator`. В `DefaultDmarcVerifier` добавлен RFC 5322 multiline unfolding и удаление комментариев, присваивается статус `BIMI_ASSERTION`.
+
+Выполнена сквозная интеграция UI: `BimiLogoRepository` внедрен в просмотрщик писем (`MessageTopView`), заголовок (`MessageHeader` с `@+id/sender_verified_badge`) и списки писем (`MessageListSenderAvatarResolver` с мгновенным синхронным `findCached`). Заглушка контакта заменена на `Icons.Outlined.AccountCircle`. Настройки видимости аватара в письме и списке разделены (`isShowInMessageView`).
+
+Проверено: `GeneralSettingsDescriptionsTest`, `:core:preference:impl:jvmTest` (37 тестов), `:feature:mail:sender:avatar:internal:testDebugUnitTest` (40 тестов), UI-тесты списков и писем, `spotlessCheck` (45 задач), `Check-Memory.ps1` (0 ошибок).

@@ -38,19 +38,26 @@ class DefaultSenderAvatarSettingsPreferenceManager(
     }
 
     override fun save(config: SenderAvatarSettings) {
+        val previousConfig = configState.value
         pendingConfig.value = config
         configState.value = config
-        messageListPreferencesManager.save(
-            messageListPreferencesManager.getConfig().copy(
-                isShowContactPicture = config.isShowInMessageList,
-                isColorizeMissingContactPictures = config.isColorizeMissing,
-            ),
-        )
-        notificationPreferenceManager.save(
-            notificationPreferenceManager.getConfig().copy(
-                isShowContactPictureInNotification = config.isShowInNotifications,
-            ),
-        )
+        try {
+            messageListPreferencesManager.save(
+                messageListPreferencesManager.getConfig().copy(
+                    isShowContactPicture = config.isShowInMessageList,
+                    isColorizeMissingContactPictures = config.isColorizeMissing,
+                ),
+            )
+            notificationPreferenceManager.save(
+                notificationPreferenceManager.getConfig().copy(
+                    isShowContactPictureInNotification = config.isShowInNotifications,
+                ),
+            )
+        } catch (e: Throwable) {
+            pendingConfig.value = null
+            configState.value = previousConfig
+            throw e
+        }
     }
 
     override fun getConfig(): SenderAvatarSettings = configState.value

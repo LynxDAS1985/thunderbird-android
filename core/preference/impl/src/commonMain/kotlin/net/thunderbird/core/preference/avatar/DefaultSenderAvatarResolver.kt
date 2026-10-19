@@ -36,10 +36,8 @@ class DefaultSenderAvatarResolver : SenderAvatarResolver {
     }
 
     private fun SenderAvatarSettings.isEnabledFor(surface: SenderAvatarSurface): Boolean = when (surface) {
-        SenderAvatarSurface.MESSAGE_LIST,
-        SenderAvatarSurface.MESSAGE_VIEW,
-        -> isShowInMessageList
-
+        SenderAvatarSurface.MESSAGE_LIST -> isShowInMessageList
+        SenderAvatarSurface.MESSAGE_VIEW -> isShowInMessageView
         SenderAvatarSurface.NOTIFICATION -> isShowInNotifications
     }
 

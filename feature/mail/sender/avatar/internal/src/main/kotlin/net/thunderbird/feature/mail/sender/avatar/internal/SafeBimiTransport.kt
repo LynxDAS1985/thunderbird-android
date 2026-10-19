@@ -39,8 +39,9 @@ internal class SafeBimiTransport(
             client.newCall(request).execute().use { response ->
                 if (response.code in 300..399) {
                     if (redirectCount == MAX_REDIRECTS) throw BimiTransportException.TooManyRedirects
-                    current =
-                        safeUri.resolve(response.header("Location") ?: throw BimiTransportException.InvalidResponse)
+                    val location = response.header("Location") ?: throw BimiTransportException.InvalidResponse
+                    current = runCatching { safeUri.resolve(location.trim()) }
+                        .getOrElse { throw BimiTransportException.InvalidResponse }
                     return@repeat
                 }
                 val contentLength = response.body.contentLength()

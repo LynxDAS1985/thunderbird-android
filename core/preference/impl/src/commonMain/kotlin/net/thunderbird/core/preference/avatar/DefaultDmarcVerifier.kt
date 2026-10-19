@@ -9,8 +9,12 @@ class DefaultDmarcVerifier : DmarcVerifier {
         val parsed = AuthenticationResultsParser.parse(header) ?: return SenderVerificationResult.NotChecked
         if (parsed.authservId !in trustedIds) return SenderVerificationResult.NotChecked
 
-        val fromDomain = request.fromAddress.substringAfterLast('@', missingDelimiterValue = "")
-            .substringBefore('>')
+        val email = if (request.fromAddress.contains('<') && request.fromAddress.contains('>')) {
+            request.fromAddress.substringAfter('<').substringBefore('>')
+        } else {
+            request.fromAddress.substringBefore('(').trim()
+        }
+        val fromDomain = email.substringAfterLast('@', missingDelimiterValue = "")
             .let(::normalizeDomain)
             ?: return failed(request, SenderVerificationFailure.IDENTITY_MISMATCH)
 
@@ -18,9 +22,14 @@ class DefaultDmarcVerifier : DmarcVerifier {
         if (dmarc.result != "pass") return failed(request, SenderVerificationFailure.AUTHENTICATION_FAILED)
         if (dmarc.headerFrom != fromDomain) return failed(request, SenderVerificationFailure.IDENTITY_MISMATCH)
 
+        val methods = mutableSetOf(SenderVerificationMethod.DMARC_ALIGNMENT)
+        if (parsed.hasBimiPass) {
+            methods.add(SenderVerificationMethod.BIMI_ASSERTION)
+        }
+
         return SenderVerificationResult.Verified(
             message = request.message,
-            methods = setOf(SenderVerificationMethod.DMARC_ALIGNMENT),
+            methods = methods,
         )
     }
 
@@ -32,10 +41,16 @@ private object AuthenticationResultsParser {
     private const val MAX_HEADER_LENGTH = 16_384
 
     fun parse(value: String): ParsedAuthenticationResults? {
-        if (value.length > MAX_HEADER_LENGTH || value.any { it == '\u0000' || it == '\r' || it == '\n' }) return null
+        val unfolded = unfold(value)
+        if (unfolded.length > MAX_HEADER_LENGTH ||
+            unfolded.any { it == '\u0000' || it == '\r' || it == '\n' }
+        ) {
+            return null
+        }
 
-        val sections = splitSections(value) ?: return null
+        val sections = splitSections(unfolded) ?: return null
         val authservId = sections.firstOrNull()
+            ?.let(::removeComments)
             ?.trim()
             ?.substringBefore(' ')
             ?.let(::normalizeDomain)
@@ -44,8 +59,19 @@ private object AuthenticationResultsParser {
         val dmarcSections = sections.drop(1).mapNotNull(::parseDmarc)
         if (dmarcSections.size != 1) return null
 
-        return ParsedAuthenticationResults(authservId, dmarcSections.single())
+        val hasBimiPass = sections.drop(1).any { section ->
+            val uncommented = removeComments(section) ?: return@any false
+            val tokens = uncommented.trim().split(Regex("\\s+")).filter(String::isNotEmpty)
+            val method = tokens.firstOrNull()?.split('=', limit = 2) ?: return@any false
+            method.size == 2 && method[0].equals("bimi", ignoreCase = true) &&
+                method[1].equals("pass", ignoreCase = true)
+        }
+
+        return ParsedAuthenticationResults(authservId, dmarcSections.single(), hasBimiPass)
     }
+
+    private fun unfold(value: String): String =
+        value.replace(Regex("""\r?\n[ \t]+"""), " ").trim()
 
     private fun parseDmarc(section: String): ParsedDmarc? {
         val uncommented = removeComments(section) ?: return null
@@ -58,10 +84,10 @@ private object AuthenticationResultsParser {
             val pair = token.split('=', limit = 2)
             pair.takeIf { it.size == 2 && it[0].equals("header.from", ignoreCase = true) }?.get(1)
         }
-        if (headerFromValues.size != 1) return null
-        val headerFrom = normalizeDomain(headerFromValues.single()) ?: return null
+        val headerFrom = headerFromValues.singleOrNull()?.let(::normalizeDomain)
+        if (result == "pass" && headerFrom == null) return null
 
-        return ParsedDmarc(result, headerFrom)
+        return ParsedDmarc(result, headerFrom.orEmpty())
     }
 
     private fun splitSections(value: String): List<String>? {
@@ -126,6 +152,7 @@ private object AuthenticationResultsParser {
 private data class ParsedAuthenticationResults(
     val authservId: String,
     val dmarc: ParsedDmarc?,
+    val hasBimiPass: Boolean = false,
 )
 
 private data class ParsedDmarc(

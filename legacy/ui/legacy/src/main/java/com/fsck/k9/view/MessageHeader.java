@@ -58,6 +58,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
     private ImageView starView;
     private ImageView contactPictureView;
     private MaterialTextView fromView;
+    private ImageView senderVerifiedBadge;
     private ImageView cryptoStatusIcon;
     private RecipientNamesView recipientNamesView;
     private MaterialTextView dateView;
@@ -89,6 +90,13 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         starView = findViewById(R.id.flagged);
         contactPictureView = findViewById(R.id.contact_picture);
         fromView = findViewById(R.id.from);
+        senderVerifiedBadge = findViewById(R.id.sender_verified_badge);
+        if (senderVerifiedBadge != null) {
+            TooltipCompat.setTooltipText(
+                senderVerifiedBadge,
+                getContext().getString(R.string.crypto_msg_encrypted_sign_verified)
+            );
+        }
         cryptoStatusIcon = findViewById(R.id.crypto_status_icon);
         recipientNamesView = findViewById(R.id.recipients);
         dateView = findViewById(R.id.date);
@@ -253,6 +261,9 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
     public void setSenderAvatar(@NonNull MessageViewSenderAvatar senderAvatar) {
         if (senderAvatar instanceof MessageViewSenderAvatar.Hidden) {
             contactPictureView.setVisibility(View.GONE);
+            if (senderVerifiedBadge != null) {
+                senderVerifiedBadge.setVisibility(View.GONE);
+            }
             return;
         }
 
@@ -263,6 +274,9 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
             contactPictureLoader.setContactPicture(contactPictureView, visible.getImageUri());
         } else {
             contactPictureLoader.setContactPicture(contactPictureView, visible.getFallbackAddress());
+        }
+        if (senderVerifiedBadge != null) {
+            senderVerifiedBadge.setVisibility(visible.isVerified() ? View.VISIBLE : View.GONE);
         }
     }
 

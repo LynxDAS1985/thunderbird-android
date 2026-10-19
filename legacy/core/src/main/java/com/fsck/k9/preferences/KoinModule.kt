@@ -17,8 +17,6 @@ import net.thunderbird.core.preference.avatar.DmarcVerifier
 import net.thunderbird.core.preference.avatar.SenderAvatarResolver
 import net.thunderbird.core.preference.avatar.SenderAvatarSettingsPreferenceManager
 import net.thunderbird.core.preference.debugging.DebuggingSettingsPreferenceManager
-import net.thunderbird.feature.mail.sender.avatar.BimiLogoRepository
-import net.thunderbird.feature.mail.sender.avatar.internal.BimiLogoRepositoryFactory
 import net.thunderbird.core.preference.debugging.DefaultDebuggingSettingsPreferenceManager
 import net.thunderbird.core.preference.display.DefaultDisplaySettingsPreferenceManager
 import net.thunderbird.core.preference.display.DisplaySettingsPreferenceManager
@@ -141,9 +139,6 @@ val preferencesModule = module {
     }
     single<SenderAvatarResolver> { DefaultSenderAvatarResolver() }
     single<DmarcVerifier> { DefaultDmarcVerifier() }
-    single<BimiLogoRepository> {
-        BimiLogoRepositoryFactory.create(get<Context>().cacheDir.toPath())
-    }
     single<NetworkSettingsPreferenceManager> {
         DefaultNetworkSettingsPreferenceManager(
             logger = get(),

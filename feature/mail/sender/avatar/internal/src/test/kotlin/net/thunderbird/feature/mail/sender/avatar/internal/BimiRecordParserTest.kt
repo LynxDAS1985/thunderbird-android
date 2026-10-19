@@ -14,6 +14,17 @@ class BimiRecordParserTest {
     }
 
     @Test
+    fun `parses valid BIMI records with optional empty a tag and selector tag`() {
+        val withEmptyA = BimiRecordParser.parseLogoUri("v=BIMI1; l=https://brand.example/logo.svg; a=;")
+        assertThat(withEmptyA.toString()).isEqualTo("https://brand.example/logo.svg")
+
+        val withSelector = BimiRecordParser.parseLogoUri(
+            "v=BIMI1; s=default; l=https://brand.example/logo.svg; a=self;",
+        )
+        assertThat(withSelector.toString()).isEqualTo("https://brand.example/logo.svg")
+    }
+
+    @Test
     fun `rejects unknown duplicate insecure and oversized values`() {
         assertThat(BimiRecordParser.parseLogoUri("v=BIMI1; x=value; l=https://brand.example/logo.svg")).isNull()
         assertThat(BimiRecordParser.parseLogoUri("v=BIMI1; v=BIMI1; l=https://brand.example/logo.svg")).isNull()

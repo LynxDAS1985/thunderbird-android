@@ -1,0 +1,17 @@
+# Cursor AI Instructions for Thunderbird for Android
+
+You are working on a fork of Thunderbird for Android.
+Before taking any action, you MUST read and follow:
+1. AGENTS.md (Comprehensive AI agent guide and architectural rules)
+2. CLAUDE.md (Russian operational rules and workflow)
+3. .memory-bank/README.md (Single source of truth for project state)
+4. .memory-bank/architecture.md and coding-rules.md
+
+## Strict Rules:
+- **Rule of 3 Facts**: Always base changes on (1) official Google/Kotlin documentation, (2) actual repository code, (3) .memory-bank/ ADRs.
+- **ADR-0009**: Strictly adhere to API/Internal module boundaries. Never import internal classes into other feature or legacy modules.
+- **Zero PII**: NEVER log user email addresses or personal data.
+- **No Heavy Builds**: Do NOT run `./gradlew build` or background emulators. Use targeted tests like `./gradlew :app-thunderbird:assembleFullDebug` or unit tests.
+- **No Git Mass-Adds**: Do NOT use `git add .` or `git add -A`. Add files explicitly.
+- **Audit Logging**: Upon completing audits, append your findings to `AUDIT II.md` following rules in `AUDIT-REGISTRY.md`.
+

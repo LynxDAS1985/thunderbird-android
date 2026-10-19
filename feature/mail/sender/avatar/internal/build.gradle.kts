@@ -16,7 +16,10 @@ dependencies {
     implementation(libs.androidsvg)
     implementation(libs.minidns.hla)
     implementation(libs.okhttp)
+    implementation(libs.timber)
+    implementation(libs.kotlinx.coroutines.core)
 
     testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.robolectric)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

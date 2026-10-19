@@ -101,12 +101,13 @@ class DefaultSenderAvatarResolverTest {
     }
 
     @Test
-    fun `hides list and message view avatar when list setting is disabled`() {
-        val settings = SenderAvatarSettings(isShowInMessageList = false)
+    fun `hides list and message view avatar when respective setting is disabled`() {
+        val listDisabled = SenderAvatarSettings(isShowInMessageList = false)
+        val viewDisabled = SenderAvatarSettings(isShowInMessageView = false)
 
-        assertThat(testSubject.resolve(request(surface = SenderAvatarSurface.MESSAGE_LIST, settings = settings)))
+        assertThat(testSubject.resolve(request(surface = SenderAvatarSurface.MESSAGE_LIST, settings = listDisabled)))
             .isEqualTo(SenderAvatarResolution.Hidden)
-        assertThat(testSubject.resolve(request(surface = SenderAvatarSurface.MESSAGE_VIEW, settings = settings)))
+        assertThat(testSubject.resolve(request(surface = SenderAvatarSurface.MESSAGE_VIEW, settings = viewDisabled)))
             .isEqualTo(SenderAvatarResolution.Hidden)
     }
 

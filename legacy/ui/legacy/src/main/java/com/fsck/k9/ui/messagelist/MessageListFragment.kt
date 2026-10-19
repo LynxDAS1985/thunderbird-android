@@ -149,6 +149,7 @@ import net.thunderbird.core.ui.theme.api.FeatureThemeProvider
 import net.thunderbird.feature.account.AccountIdFactory
 import net.thunderbird.feature.account.UnifiedAccountId
 import net.thunderbird.feature.account.avatar.AvatarMonogramCreator
+import net.thunderbird.feature.mail.sender.avatar.BimiLogoRepository
 import net.thunderbird.feature.changelog.internal.RecentChangesViewModel
 import net.thunderbird.feature.mail.folder.api.OutboxFolderManager
 import net.thunderbird.feature.mail.message.list.domain.model.SortCriteria
@@ -234,12 +235,14 @@ class MessageListFragment :
     private val avatarMonogramCreator: AvatarMonogramCreator by inject()
     private val senderAvatarSettingsPreferenceManager: SenderAvatarSettingsPreferenceManager by inject()
     private val coreSenderAvatarResolver: SenderAvatarResolver by inject()
+    private val bimiLogoRepository: BimiLogoRepository by inject()
     private val senderAvatarResolver by lazy {
         MessageListSenderAvatarResolver(
             contactRepository = contactRepository,
             avatarMonogramCreator = avatarMonogramCreator,
             settingsManager = senderAvatarSettingsPreferenceManager,
             resolver = coreSenderAvatarResolver,
+            bimiLogoRepository = bimiLogoRepository,
         )
     }
 

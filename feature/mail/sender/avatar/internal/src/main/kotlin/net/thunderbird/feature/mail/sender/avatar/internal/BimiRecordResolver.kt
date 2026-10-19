@@ -1,6 +1,7 @@
 package net.thunderbird.feature.mail.sender.avatar.internal
 
 import java.net.URI
+import org.minidns.dnsmessage.DnsMessage
 import org.minidns.hla.DnssecResolverApi
 import org.minidns.record.TXT
 
@@ -25,13 +26,19 @@ internal class MiniDnsBimiRecordResolver : BimiRecordResolver {
     override fun lookup(domain: String, selector: String): BimiRecordLookupResult = runCatching {
         val queryName = "$selector._bimi.$domain"
         val result = DnssecResolverApi.INSTANCE.resolve(queryName, TXT::class.java)
-        if (!result.wasSuccessful()) return@runCatching BimiRecordLookupResult.Error
+        if (!result.wasSuccessful()) {
+            if (result.responseCode == DnsMessage.RESPONSE_CODE.NX_DOMAIN) {
+                return@runCatching BimiRecordLookupResult.NotFound
+            }
+            return@runCatching BimiRecordLookupResult.Error
+        }
 
         val answers = result.answersOrEmptySet.toList()
         if (answers.isEmpty()) return@runCatching BimiRecordLookupResult.NotFound
         if (answers.size != 1) return@runCatching BimiRecordLookupResult.Invalid
 
-        val text = answers.single().text
+        val txtRecord = answers.single()
+        val text = txtRecord.characterStrings?.joinToString("") ?: txtRecord.text
         val logoUri = BimiRecordParser.parseLogoUri(text) ?: return@runCatching BimiRecordLookupResult.Invalid
         val ttlSeconds = result.rawAnswer.answerSection
             .filter { it.type.name == "TXT" }
@@ -67,7 +74,9 @@ internal object BimiRecordParser {
             if (separator <= 0) return null
             val name = trimmed.substring(0, separator).trim().lowercase()
             val value = trimmed.substring(separator + 1).trim()
-            if (name !in setOf("v", "l", "a") || value.isEmpty() || tags.put(name, value) != null) return null
+            if (name !in setOf("v", "l", "a", "s")) return null
+            if (name != "a" && value.isEmpty()) return null
+            if (tags.put(name, value) != null) return null
         }
 
         if (tags["v"] != "BIMI1") return null

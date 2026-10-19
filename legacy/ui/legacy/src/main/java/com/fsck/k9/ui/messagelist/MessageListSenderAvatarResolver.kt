@@ -9,6 +9,7 @@ import net.thunderbird.core.preference.avatar.SenderAvatarSettingsPreferenceMana
 import net.thunderbird.core.preference.avatar.SenderAvatarSurface
 import net.thunderbird.core.preference.avatar.SenderMessageIdentity
 import net.thunderbird.feature.account.avatar.AvatarMonogramCreator
+import net.thunderbird.feature.mail.sender.avatar.BimiLogoRepository
 
 /** Android boundary that supplies message-list data to the platform-independent avatar resolver. */
 class MessageListSenderAvatarResolver(
@@ -16,6 +17,7 @@ class MessageListSenderAvatarResolver(
     private val avatarMonogramCreator: AvatarMonogramCreator,
     private val settingsManager: SenderAvatarSettingsPreferenceManager,
     private val resolver: SenderAvatarResolver,
+    private val bimiLogoRepository: BimiLogoRepository? = null,
 ) {
     fun resolve(item: MessageListItem, showAvatar: Boolean): SenderAvatarResolution {
         val address = item.displayAddress?.address
@@ -24,6 +26,9 @@ class MessageListSenderAvatarResolver(
             ?.let { uri -> SenderAvatarImage(uri.toString()) }
         val monogram = avatarMonogramCreator.create(item.displayName.toString(), address)
         val settings = settingsManager.getConfig().copy(isShowInMessageList = showAvatar)
+
+        val domain = address?.substringAfter('@', "")?.takeIf(String::isNotEmpty)
+        val cachedBrandImage = domain?.let { bimiLogoRepository?.findCached(it) }
 
         return resolver.resolve(
             SenderAvatarRequest(
@@ -35,7 +40,7 @@ class MessageListSenderAvatarResolver(
                 surface = SenderAvatarSurface.MESSAGE_LIST,
                 settings = settings,
                 contactImage = contactImage,
-                verifiedBrandImage = null,
+                verifiedBrandImage = cachedBrandImage,
                 monogram = monogram,
             ),
         )

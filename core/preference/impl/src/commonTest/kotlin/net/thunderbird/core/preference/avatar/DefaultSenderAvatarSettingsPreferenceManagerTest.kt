@@ -157,6 +157,32 @@ class DefaultSenderAvatarSettingsPreferenceManagerTest {
         }
     }
 
+    @Test
+    fun `save failure should reset pending state and rollback configState`() = runTest {
+        val failingManager = object :
+            FakePreferenceManager<DisplayMessageListSettings>(DisplayMessageListSettings()),
+            MessageListPreferencesManager {
+            override fun save(config: DisplayMessageListSettings) {
+                throw IllegalStateException("Disk full")
+            }
+        }
+        val notificationManager = FakeNotificationPreferenceManager(NotificationPreference())
+        val manager = createManager(failingManager, notificationManager, backgroundScope)
+        val initialConfig = manager.getConfig()
+
+        kotlin.test.assertFailsWith<IllegalStateException> {
+            manager.save(
+                SenderAvatarSettings(
+                    isShowInMessageList = false,
+                    isColorizeMissing = false,
+                    isShowInNotifications = false,
+                ),
+            )
+        }
+
+        assertThat(manager.getConfig()).isEqualTo(initialConfig)
+    }
+
     private fun createManager(
         messageListSettings: DisplayMessageListSettings,
         notificationSettings: NotificationPreference,

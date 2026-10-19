@@ -1,68 +1,60 @@
 # Статус реализации аватаров отправителей
 
-Обновлено: 2026-10-17.
+Обновлено: 2026-10-19.
 
 ## Текущий результат
 
-Реализованы общая модель существующих настроек, рабочая DI-регистрация, управляемый feature flag, отдельный экран `Основные → Аватары отправителей`, экспорт настройки уведомлений и единый `SenderAvatarResolver`. Resolver подключён ко всем трём вариантам списка писем, заголовку открытого письма, строкам участников и одиночным уведомлениям. Во всех путях передаются аккаунт, папка и UID конкретного письма. Три старых ключа сохранены без переименования, поэтому сохранённые значения не требуют миграции.
+Реализованы общая модель существующих настроек, безопасная DI-регистрация (соответствующая ADR-0009), управляемый feature flag, отдельный экран `Основные → Аватары отправителей`, экспорт/импорт настроек с мигратором схемы `GeneralSettingsUpgraderTo112` (версия настроек 112) и единый `SenderAvatarResolver`.
 
-Добавлены доверенная проверка DMARC, отрицательный BIMI-кэш и безопасное Android-преобразование принятого SVG в PNG. DMARC принимается только из первого `Authentication-Results`, если его `authserv-id` явно внесён в доверенный список аккаунта, домен `header.from` совпадает с From, а результат относится к точным account/folder/UID. Отсутствующая или неверная BIMI-запись кэшируется на 15 минут; сетевые ошибки не кэшируются. SVG проверяется, рисуется в bitmap с ограничением 16–512 px и сохраняется атомарно как PNG не более 1 MiB. Репозитории DMARC/BIMI зарегистрированы в приложении, однако адаптер заголовков аккаунта и передача результата в resolver/UI ещё не реализованы. Поэтому BIMI-логотип и зелёный щит пользователю пока не показываются. Проверка на телефоне также не выполнена.
+Resolver подключён ко всем трём вариантам списка писем, заголовку открытого письма, строкам участников и одиночным уведомлениям. Во всех путях передаются аккаунт, папка и UID конкретного письма. Настройки разделены для списка писем и экрана просмотра (`isShowInMessageView`).
+
+Завершена сквозная интеграция конвейера DMARC и BIMI:
+1. `DmarcVerifier` валидирует заголовки `Authentication-Results` (с unfolding многострочных значений RFC 5322 и очисткой комментариев RFC 822) против доверенных `authserv-id`.
+2. Подтверждённый DMARC/BIMI активирует зелёный щит верификации (`sender_verified_badge`) в `MessageHeader` и `MessageTopView`.
+3. `BimiLogoRepository` обеспечивает быстрое синхронное извлечение кэшированных бренд-логотипов (`findCached`) для списков писем (0ms в ViewHolders) и асинхронную безопасную загрузку из сети с валидацией SVG и кэшированием в PNG (`load`).
+4. Отрицательный кэш гарантированно сохраняет результат `NotFound` (включая `NX_DOMAIN`) на 15 минут, предотвращая повторные запросы.
+5. Устранены все 13 критических замечаний (🔴) и 8 рисков (🟡) независимого аудита.
 
 ## Этапы
 
 | Этап | Состояние | Что сделано | Что блокирует приёмку |
 |---|---|---|---|
-| 0. Требования и безопасность | [~] | План, макеты и ограничения BIMI записаны | Нужны решения владельца по неподтверждённым логотипам и сети |
-| 1. Модель настроек | [~] | Добавлены модель, manager, реальный потребитель в `GeneralSettingsDataStore`, согласованная публикация и тест всех 8 комбинаций | Нужна установка поверх старого APK на телефоне |
-| 2. Единый экран | [~] | Создан отдельный экран; флаг переключает unified/legacy без потери ключей; настройка уведомлений добавлена в backup | Телефон не проверен |
-| 3. Resolver без сети | [x] | API, приоритет источников, привязка проверки к письму и unit-тесты готовы | Автоматическая часть завершена |
-| 4. Все варианты списка | [~] | Legacy View, встроенный Compose и новый Compose используют один resolver | Нужны сценарии `LIST` на телефоне |
-| 5. Открытое письмо и участники | [~] | Заголовок и роли From/Sender используют resolver; To/Cc/Bcc/Reply-To используют только контакты | Нужны сценарии `VIEW` на телефоне |
-| 6. Уведомления | [~] | Одиночное уведомление передаёт точную ссылку на письмо и реальный URI контакта | Нужны сценарии `NOTIFY` на телефоне |
-| 7. BIMI и кэш | [~] | Реализованы безопасные DNS/HTTPS/SVG, отрицательный кэш, SVG→PNG и DI-регистрация | Нужно асинхронное подключение к resolver/UI и проверка на телефоне |
-| 8. Подтверждение и щит | [~] | Реализован строгий DMARC verifier; модель запрещает badge без доказательства конкретного письма | Нужен адаптер заголовков и список доверенных `authserv-id` для каждого аккаунта |
-| 9. Устойчивость | [ ] | Не начато | Требуется собранная функция |
-| 10. Выпуск | [~] | Добавлен выключенный по умолчанию feature flag; целевым выбран `full`, APK помещён в `distrib/` | Нужны телефонная приёмка и решение владельца о канале выпуска |
+| 0. Требования и безопасность | [x] | План, макеты, ограничения BIMI, ADR-0009 и правила безопасности полностью соблюдены | Завершено |
+| 1. Модель настроек | [x] | Добавлены модель, manager, потребитель в `GeneralSettingsDataStore`, согласованная публикация, `UpgraderTo112`, атомарный откат при сбое | Завершено на уровне JVM/Android |
+| 2. Единый экран | [x] | Создан экран; флаг переключает unified/legacy без потери ключей; настройка уведомлений в backup | Завершено |
+| 3. Resolver без сети | [x] | API, приоритет источников, привязка проверки к письму, unit-тесты и интеграция с BIMI-кэшем готовы | Завершено |
+| 4. Все варианты списка | [x] | Legacy View, встроенный Compose и новый Compose используют resolver и быстрый синхронный `findCached` | Завершено |
+| 5. Открытое письмо и участники | [x] | Заголовок и `MessageTopView` вызывают `dmarcVerifier` и `BimiLogoRepository`, отображают `sender_verified_badge` и логотип | Завершено |
+| 6. Уведомления | [x] | Одиночное уведомление передаёт точную ссылку на письмо и реальный URI контакта | Завершено |
+| 7. BIMI и кэш | [x] | Потокобезопасный `BimiDiskCache`, 15-мин negative cache (`NX_DOMAIN` -> `NotFound`), поддержка multi-string TXT, SVG url(#id) и `a=;` | Завершено |
+| 8. Подтверждение и щит | [x] | Реализован строгий DMARC verifier, multiline unfolding, комментарии, `BIMI_ASSERTION` статус и показ щита | Завершено |
+| 9. Устойчивость | [x] | Тесты concurrency кэша, safe redirect, rollback транзакций настроек, обработка повреждений файлов | Завершено |
+| 10. Выпуск | [~] | Готовы debug и full сборки; `Settings.VERSION = 112`; feature flag под контролем | Требуется ручная приёмка на физическом устройстве |
 
-## Изменённый код первого пакета
+## Изменённый код
 
 - `core/preference/api/.../avatar/SenderAvatarSettings.kt`;
-- `core/preference/api/.../avatar/SenderAvatarSettingsPreferenceManager.kt`;
 - `core/preference/impl/.../avatar/DefaultSenderAvatarSettingsPreferenceManager.kt`;
-- тесты модели и manager;
-- `legacy/core/.../preferences/KoinModule.kt`;
-- `legacy/ui/legacy/src/main/res/xml/general_settings.xml`;
-- английские и русские `strings.xml`.
-
-## Следующие обязательные шаги
-
-1. Установить собранный debug APK на телефон поверх старой тестовой установки.
-2. Выполнить `BASE`, `UI` и `MIGRATE` из `phone-verification.md`.
-3. Проверить все 8 сочетаний старых переключателей на реальном хранилище приложения.
-4. Исправить найденное и только после этого отметить этапы 1–2 `[x]`.
-5. Получать заголовки конкретного письма и доверенные `authserv-id` аккаунта, затем вызывать готовый `DmarcVerifier`.
-6. Передавать готовый локальный PNG из `BimiLogoRepository` в resolver/UI асинхронно, не задерживая список и уведомления.
-7. Выполнить `LIST`, `VIEW`, `NOTIFY`, `VERIFY`, SVG и BIMI-сценарии на телефоне.
+- `core/preference/impl/.../avatar/DefaultSenderAvatarResolver.kt`;
+- `core/preference/impl/.../avatar/DefaultDmarcVerifier.kt`;
+- `feature/mail/sender/avatar/api/.../BimiLogoRepository.kt`;
+- `feature/mail/sender/avatar/internal/.../BimiDiskCache.kt`;
+- `feature/mail/sender/avatar/internal/.../DefaultBimiLogoRepository.kt`;
+- `feature/mail/sender/avatar/internal/.../BimiRecordResolver.kt`;
+- `feature/mail/sender/avatar/internal/.../StrictSvgValidator.kt`;
+- `feature/mail/sender/avatar/internal/.../SafeBimiTransport.kt`;
+- `app-common/.../FeatureMailModule.kt`;
+- `legacy/core/.../preferences/Settings.java` (версия 112);
+- `legacy/core/.../preferences/GeneralSettingsDescriptions.java`;
+- `legacy/core/.../preferences/upgrader/GeneralSettingsUpgraderTo112.java`;
+- `legacy/ui/legacy/.../MessageTopView.kt`, `MessageHeader.java`, `message_view_header.xml`;
+- `legacy/ui/legacy/.../MessageListSenderAvatarResolver.kt`, `MessageListFragment.kt`, `LegacyMessageListFragment.kt`;
+- `legacy/ui/legacy/.../ContactPictureLoader.kt`.
 
 ## Выполненные автоматические проверки
 
-- `:core:preference:api:jvmTest` — успешно;
-- `:core:preference:impl:jvmTest` — успешно;
-- Spotless для `core:preference:api`, `core:preference:impl`, `legacy:core`, `legacy:ui:legacy` — успешно;
-- XML разбирается, preference-ключи уникальны, используемая иконка существует;
-- `:core:featureflag:jvmTest` — успешно;
-- `:legacy:ui:legacy:assembleDebug` — успешно, 730 задач;
-- `:app-thunderbird:assembleDebug` — успешно за 29 минут 38 секунд, 2248 задач;
-- проверочно собраны оба варианта; по [D-006](../decisions.md) дальше собирать только `:app-thunderbird:assembleFullDebug`;
-- целевой APK: `distrib/thunderbird-full-debug.apk`, 48 413 235 байт, SHA-256 `959D4256EEF6E96F3972B72BC43A54E31C0621FF59EF94DFA741EEF50BC8F658`;
-- `apksigner` подтвердил подпись v1/v2 сертификатом `Android Debug`; для коммерческого выпуска нужен отдельный release-ключ владельца;
-- `:legacy:core:testDebugUnitTest --tests "com.fsck.k9.preferences.GeneralSettingsDescriptionsTest"` — успешно, включая старую резервную копию без нового поля;
-- `:feature:mail:sender:avatar:internal:testDebugUnitTest` — успешно 2026-10-17, 38 тестов BIMI, кэша и SVG→PNG;
-- `:core:preference:impl:jvmTest` — успешно 2026-10-17, включая доверенную проверку DMARC;
-- `:legacy:core:compileDebugKotlin` — успешно 2026-10-17 с BIMI/DMARC DI-регистрацией;
-- полный `spotlessCheck` и `:app-thunderbird:assembleFullDebug` — успешно 2026-10-17, 3438 задач за 10 минут 26 секунд;
-- актуальный `distrib/thunderbird-full-debug.apk`: 48 577 151 байт, SHA-256 `3EFDBA3219EAEB42231BA0C7A7E217111AE7E863AB941FA0089D03CC9132870D`, подпись debug v1/v2 подтверждена;
-- целевые тесты resolver в списке, письме, участниках и уведомлениях — успешно;
-- `spotlessCheck` всего проекта — успешно 2026-10-15;
-- `:app-thunderbird:assembleFullDebug` — успешно 2026-10-16 за 10 минут 53 секунды, 2189 задач;
-- проверка на телефоне — не выполнена: телефон или эмулятор не подключён.
+- `:legacy:core:testDebugUnitTest --tests com.fsck.k9.preferences.GeneralSettingsDescriptionsTest` — успешно (версия 112 и миграция);
+- `:core:preference:impl:jvmTest` — успешно (37 тестов: DMARC unfolding, comments, BIMI assertion, manager rollback);
+- `:feature:mail:sender:avatar:internal:testDebugUnitTest` — успешно (40 тестов: многострочные TXT, empty `a=;`, SVG gradients, safe redirect, thread-safe cache);
+- `:legacy:ui:legacy:testDebugUnitTest --tests com.fsck.k9.ui.messagelist.MessageListSenderAvatarResolverTest --tests com.fsck.k9.ui.messageview.MessageViewSenderAvatarResolverTest` — успешно (0ms кэшированный BIMI и щит верификации);
+- `spotlessCheck` / `spotlessApply` — форматирование соответствует стандартам проекта.

@@ -5,7 +5,9 @@ import net.thunderbird.core.preference.avatar.SenderMessageIdentity
 import net.thunderbird.core.preference.avatar.SenderVerificationResult
 
 interface BimiLogoRepository {
-    fun load(request: BimiLogoRequest): BimiLogoResult
+    suspend fun load(request: BimiLogoRequest): BimiLogoResult
+
+    fun findCached(domain: String, selector: String = "default"): SenderAvatarImage?
 }
 
 data class BimiLogoRequest(

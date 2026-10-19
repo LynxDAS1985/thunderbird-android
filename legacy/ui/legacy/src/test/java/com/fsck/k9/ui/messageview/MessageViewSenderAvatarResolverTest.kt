@@ -76,7 +76,7 @@ class MessageViewSenderAvatarResolverTest : RobolectricTest() {
 
     @Test
     fun `avatar is hidden when message view setting is disabled`() {
-        settingsManager.currentConfig = SenderAvatarSettings(isShowInMessageList = false)
+        settingsManager.currentConfig = SenderAvatarSettings(isShowInMessageView = false)
 
         val result = testSubject.resolve(MESSAGE_REFERENCE, ADDRESS)
 

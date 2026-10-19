@@ -14,6 +14,13 @@ class StrictSvgValidatorTest {
     }
 
     @Test
+    fun `accepts internal gradients and whitespace in viewBox`() {
+        val svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0\t0\t10\t10'>" +
+            "<defs><linearGradient id='g1'/></defs><path fill='url(#g1)'/></svg>"
+        assertThat(testSubject.isValid(svg.bytes())).isTrue()
+    }
+
+    @Test
     fun `rejects DTD entities scripts and foreign objects`() {
         assertThat(testSubject.isValid("<!DOCTYPE svg><svg viewBox='0 0 10 10'/>".bytes())).isFalse()
         assertThat(testSubject.isValid("<!ENTITY x 'x'><svg viewBox='0 0 10 10'/>".bytes())).isFalse()

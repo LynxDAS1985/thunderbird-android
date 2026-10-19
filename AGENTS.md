@@ -1,9 +1,13 @@
 # AI Agent Guide for Thunderbird for Android
 
-## Правила собственного проекта
+## Правила проекта для всех ИИ-агентов (Multi-AI Rules)
 
-Перед работой прочитайте [CLAUDE.md](CLAUDE.md) и все файлы [.memory-bank](.memory-bank/README.md).
-Они описывают русскоязычный рабочий процесс, учёт задач и выпуск собственного приложения.
+**Текущая версия приложения**: 24.0 (versionCode 33).
+Перед любой работой каждый ИИ-агент (Claude, Gemini, Codex, Qwen, Cursor, Copilot) ОБЯЗАН:
+1. Прочитать [CLAUDE.md](CLAUDE.md), [AI_INSTRUCTIONS.md](AI_INSTRUCTIONS.md) и [.memory-bank/README.md](.memory-bank/README.md).
+2. Соблюдать **Правило 3 фактов** (документация точной версии, код проекта, принятые ADR).
+3. Соблюдать **Критические запреты**: никаких скрытых `git reset --hard`, никаких фоновых `./gradlew build` без спроса, никакого `git add .`, никакой `GlobalScope`, Room без миграций, ноль утечек PII.
+4. При проведении аудита кодовой базы дописывать выводы в [AUDIT II.md](AUDIT%20II.md) по стандарту [AUDIT-REGISTRY.md](AUDIT-REGISTRY.md) (строго Append-Only).
 Технические требования исходного проекта приведены ниже и сохраняются.
 
 This file defines requirements for AI coding agents and automated systems contributing to this repository.

@@ -92,6 +92,36 @@ try {
         }
     }
 
+    foreach ($file in $files) {
+        $limitKb = if ($file.Name -ieq 'common-mistakes.md') { 10 } else { 100 }
+        $sizeKb = [math]::Round($file.Length / 1KB, 1)
+        if ($file.Length -gt ($limitKb * 1024)) {
+            $issues.Add("File size limit exceeded: $($file.FullName) ($sizeKb KB > $limitKb KB)")
+        }
+    }
+
+    # Version synchronization check
+    $gradlePath = Join-Path $root 'app-thunderbird/build.gradle.kts'
+    if (Test-Path -LiteralPath $gradlePath -PathType Leaf) {
+        $gradleText = [IO.File]::ReadAllText($gradlePath)
+        $gradleMatch = [regex]::Match($gradleText, 'versionName\s*=\s*"(?<ver>[^"]+)"')
+        if ($gradleMatch.Success) {
+            $gradleVer = $gradleMatch.Groups['ver'].Value
+            $claudeText = if (Test-Path -LiteralPath $indexes[0].Path) { [IO.File]::ReadAllText($indexes[0].Path) } else { '' }
+            $claudeMatch = [regex]::Match($claudeText, '(?i)(?:Current version|version)\D*(?<ver>[0-9]+(?:\.[0-9]+)+)')
+            $featuresPath = Join-Path $memoryRoot 'features.md'
+            $featuresText = if (Test-Path -LiteralPath $featuresPath) { [IO.File]::ReadAllText($featuresPath) } else { '' }
+            $featuresMatch = [regex]::Match($featuresText, '(?i)(?:Current version|version)\D*(?<ver>[0-9]+(?:\.[0-9]+)+)')
+
+            if (-not $claudeMatch.Success -or $claudeMatch.Groups['ver'].Value -ne $gradleVer) {
+                $issues.Add("Version mismatch in CLAUDE.md: expected '$gradleVer', found '$($claudeMatch.Groups['ver'].Value)'")
+            }
+            if (-not $featuresMatch.Success -or $featuresMatch.Groups['ver'].Value -ne $gradleVer) {
+                $issues.Add("Version mismatch in .memory-bank/features.md: expected '$gradleVer', found '$($featuresMatch.Groups['ver'].Value)'")
+            }
+        }
+    }
+
     foreach ($issue in $issues) { Write-Output "ERROR: $issue" }
     Write-Output ("Memory check: {0} files, {1} local links, {2} errors." -f $files.Count, $linkCount, $issues.Count)
     if ($issues.Count -gt 0) { exit 1 }

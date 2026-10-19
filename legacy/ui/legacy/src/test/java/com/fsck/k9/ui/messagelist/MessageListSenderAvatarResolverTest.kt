@@ -71,6 +71,31 @@ class MessageListSenderAvatarResolverTest : RobolectricTest() {
         assertThat(request.firstValue.settings.isShowInMessageList).isEqualTo(false)
     }
 
+    @Test
+    fun `resolve passes cached BIMI brand logo when available`() {
+        val bimiRepository = mock<net.thunderbird.feature.mail.sender.avatar.BimiLogoRepository>()
+        val cachedImage = SenderAvatarImage("file:///cache/bimi/example.com.png")
+        whenever(bimiRepository.findCached("example.com", "default")).thenReturn(cachedImage)
+        whenever(settingsManager.getConfig()).thenReturn(SenderAvatarSettings())
+        whenever(resolver.resolve(org.mockito.kotlin.any())).thenReturn(
+            SenderAvatarResolution.Visible(SenderAvatarSource.Generic),
+        )
+
+        val subjectWithBimi = MessageListSenderAvatarResolver(
+            contactRepository = contactRepository,
+            avatarMonogramCreator = monogramCreator,
+            settingsManager = settingsManager,
+            resolver = resolver,
+            bimiLogoRepository = bimiRepository,
+        )
+
+        subjectWithBimi.resolve(createItem(), showAvatar = true)
+
+        val request = argumentCaptor<SenderAvatarRequest>()
+        verify(resolver, org.mockito.kotlin.atLeastOnce()).resolve(request.capture())
+        assertThat(request.lastValue.verifiedBrandImage).isEqualTo(cachedImage)
+    }
+
     private fun createItem(): MessageListItem {
         val account = mock<LegacyAccount>()
         whenever(account.uuid).thenReturn("account-1")

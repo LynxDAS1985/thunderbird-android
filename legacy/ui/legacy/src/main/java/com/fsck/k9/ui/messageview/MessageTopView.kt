@@ -33,10 +33,21 @@ import net.thunderbird.core.android.account.LegacyAccountDto
 import net.thunderbird.core.android.account.ShowPictures
 import net.thunderbird.core.common.mail.EmailAddress
 import net.thunderbird.core.common.mail.toEmailAddressOrNull
+import android.net.Uri
+import androidx.lifecycle.findViewTreeLifecycleOwner
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import net.thunderbird.core.preference.BodyContentType
+import net.thunderbird.core.preference.avatar.DmarcVerificationRequest
+import net.thunderbird.core.preference.avatar.DmarcVerifier
+import net.thunderbird.core.preference.avatar.SenderMessageIdentity
+import net.thunderbird.core.preference.avatar.SenderVerificationResult
 import net.thunderbird.core.preference.display.visualSettings.DisplayVisualSettingsPreferenceManager
 import net.thunderbird.core.ui.animation.manager.AnimationManager
 import net.thunderbird.feature.mail.message.reader.api.ui.MessageReaderViewContract
+import net.thunderbird.feature.mail.sender.avatar.BimiLogoRepository
+import net.thunderbird.feature.mail.sender.avatar.BimiLogoRequest
+import net.thunderbird.feature.mail.sender.avatar.BimiLogoResult
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -49,6 +60,8 @@ class MessageTopView(
     private val visualSettingsPrefManager: DisplayVisualSettingsPreferenceManager by inject()
     private val animationManager: AnimationManager by inject()
     private val senderAvatarResolver: MessageViewSenderAvatarResolver by inject()
+    private val dmarcVerifier: DmarcVerifier by inject()
+    private val bimiLogoRepository: BimiLogoRepository by inject()
 
     private lateinit var layoutInflater: LayoutInflater
 
@@ -268,11 +281,71 @@ class MessageTopView(
         showStar: Boolean,
     ) {
         val fromAddress = message.from.firstOrNull()
-        val senderAvatar = fromAddress?.let { senderAvatarResolver.resolve(messageReference, it) }
-            ?: MessageViewSenderAvatar.Hidden
+        val authHeaders = message.getHeader("Authentication-Results")
+        val verification = if (fromAddress != null && authHeaders != null && authHeaders.isNotEmpty()) {
+            val identity = SenderMessageIdentity(
+                accountId = messageReference.accountUuid,
+                folderId = messageReference.folderId.toString(),
+                messageId = messageReference.uid,
+            )
+            dmarcVerifier.verify(
+                DmarcVerificationRequest(
+                    message = identity,
+                    fromAddress = fromAddress.address,
+                    authenticationResults = authHeaders.toList(),
+                ),
+            )
+        } else {
+            SenderVerificationResult.NotChecked
+        }
+
+        val domain = fromAddress?.address?.substringAfter('@', "")?.takeIf(String::isNotEmpty)
+        val cachedLogo = if (domain != null && verification is SenderVerificationResult.Verified) {
+            bimiLogoRepository.findCached(domain)?.let { Uri.parse(it.key) }
+        } else {
+            null
+        }
+
+        val senderAvatar = fromAddress?.let {
+            senderAvatarResolver.resolve(
+                messageReference = messageReference,
+                address = it,
+                verifiedBrandImage = cachedLogo,
+                verification = verification,
+            )
+        } ?: MessageViewSenderAvatar.Hidden
         messageHeaderView.setSenderAvatar(senderAvatar)
         messageHeaderView.populate(message, account, showStar, showAccountIndicator)
         messageHeaderView.visibility = VISIBLE
+
+        if (fromAddress != null && domain != null && cachedLogo == null && verification is SenderVerificationResult.Verified) {
+            val scope = findViewTreeLifecycleOwner()?.lifecycleScope
+            if (scope != null) {
+                scope.launch {
+                    val identity = SenderMessageIdentity(
+                        accountId = messageReference.accountUuid,
+                        folderId = messageReference.folderId.toString(),
+                        messageId = messageReference.uid,
+                    )
+                    val result = bimiLogoRepository.load(
+                        BimiLogoRequest(
+                            message = identity,
+                            alignedDomain = domain,
+                            verification = verification,
+                        ),
+                    )
+                    if (result is BimiLogoResult.Available) {
+                        val updatedAvatar = senderAvatarResolver.resolve(
+                            messageReference = messageReference,
+                            address = fromAddress,
+                            verifiedBrandImage = Uri.parse(result.image.key),
+                            verification = verification,
+                        )
+                        messageHeaderView.setSenderAvatar(updatedAvatar)
+                    }
+                }
+            }
+        }
     }
 
     fun setSubject(subject: String) {

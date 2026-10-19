@@ -30,6 +30,7 @@ import com.fsck.k9.preferences.upgrader.GeneralSettingsUpgraderTo69;
 import com.fsck.k9.preferences.upgrader.GeneralSettingsUpgraderTo79;
 import com.fsck.k9.preferences.upgrader.GeneralSettingsUpgraderTo89;
 import com.fsck.k9.preferences.upgrader.GeneralSettingsUpgraderTo111;
+import com.fsck.k9.preferences.upgrader.GeneralSettingsUpgraderTo112;
 import net.thunderbird.core.android.account.AccountDefaultsProvider;
 import net.thunderbird.core.android.account.SortType;
 import net.thunderbird.core.common.action.SwipeAction;
@@ -246,7 +247,7 @@ class GeneralSettingsDescriptions {
             new V(25, new BooleanSetting(MESSAGE_LIST_SETTINGS_DEFAULT_IS_SHOW_CONTACT_PICTURE))
         ));
         s.put("showContactPictureInNotification", Settings.versions(
-            new V(111, new BooleanSetting(NOTIFICATION_PREFERENCE_DEFAULT_IS_SHOW_CONTACT_PICTURE_IN_NOTIFICATION))
+            new V(112, new BooleanSetting(NOTIFICATION_PREFERENCE_DEFAULT_IS_SHOW_CONTACT_PICTURE_IN_NOTIFICATION))
         ));
         s.put("autofitWidth", Settings.versions(
             new V(28, new BooleanSetting(DISPLAY_SETTINGS_DEFAULT_IS_AUTO_FIT_WIDTH))
@@ -369,6 +370,7 @@ class GeneralSettingsDescriptions {
         u.put(79, new GeneralSettingsUpgraderTo79());
         u.put(89, new GeneralSettingsUpgraderTo89());
         u.put(111, new GeneralSettingsUpgraderTo111());
+        u.put(112, new GeneralSettingsUpgraderTo112());
 
         UPGRADERS = Collections.unmodifiableMap(u);
     }

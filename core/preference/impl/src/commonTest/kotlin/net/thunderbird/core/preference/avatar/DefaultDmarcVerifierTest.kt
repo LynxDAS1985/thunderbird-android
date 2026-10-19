@@ -84,12 +84,39 @@ class DefaultDmarcVerifierTest {
     }
 
     @Test
-    fun `rejects malformed or folded header value`() {
+    fun `accepts RFC 5322 folded header value`() {
         val result = testSubject.verify(
             request(headers = listOf("auth.example;\r\n dmarc=pass header.from=sender.example")),
         )
 
-        assertThat(result).isEqualTo(SenderVerificationResult.NotChecked)
+        assertThat(result).isEqualTo(
+            SenderVerificationResult.Verified(MESSAGE, setOf(SenderVerificationMethod.DMARC_ALIGNMENT)),
+        )
+    }
+
+    @Test
+    fun `accepts bimi pass tag and awards BIMI assertion method`() {
+        val result = testSubject.verify(
+            request(headers = listOf("auth.example; dmarc=pass header.from=sender.example; bimi=pass")),
+        )
+
+        assertThat(result).isEqualTo(
+            SenderVerificationResult.Verified(
+                MESSAGE,
+                setOf(SenderVerificationMethod.DMARC_ALIGNMENT, SenderVerificationMethod.BIMI_ASSERTION),
+            ),
+        )
+    }
+
+    @Test
+    fun `rejects DMARC failure even without header from`() {
+        val result = testSubject.verify(
+            request(headers = listOf("auth.example; dmarc=fail")),
+        )
+
+        assertThat(result).isEqualTo(
+            SenderVerificationResult.Failed(MESSAGE, SenderVerificationFailure.AUTHENTICATION_FAILED),
+        )
     }
 
     @Test

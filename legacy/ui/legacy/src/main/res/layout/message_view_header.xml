@@ -104,12 +104,27 @@
             android:maxLines="1"
             android:textAppearance="?attr/textAppearanceBodyLarge"
             app:layout_constrainedWidth="true"
-            app:layout_constraintEnd_toStartOf="@+id/date"
+            app:layout_constraintEnd_toStartOf="@+id/sender_verified_badge"
             app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintHorizontal_chainStyle="packed"
             app:layout_constraintStart_toEndOf="@id/contact_picture"
             app:layout_constraintTop_toTopOf="parent"
             tools:text="Sender name"
+            />
+
+        <ImageView
+            android:id="@+id/sender_verified_badge"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_marginStart="4dp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="@+id/from"
+            app:layout_constraintEnd_toStartOf="@+id/date"
+            app:layout_constraintStart_toEndOf="@+id/from"
+            app:layout_constraintTop_toTopOf="@+id/from"
+            app:srcCompat="@drawable/ic_security"
+            app:tint="?attr/openpgp_green"
+            tools:visibility="visible"
             />
 
         <com.google.android.material.textview.MaterialTextView
@@ -123,7 +138,7 @@
             android:textColor="?attr/colorSecondary"
             app:layout_constraintBaseline_toBaselineOf="@+id/from"
             app:layout_constraintEnd_toStartOf="@+id/menu_primary_action"
-            app:layout_constraintStart_toEndOf="@id/from"
+            app:layout_constraintStart_toEndOf="@+id/sender_verified_badge"
             tools:text="Sep 19"
             />
 

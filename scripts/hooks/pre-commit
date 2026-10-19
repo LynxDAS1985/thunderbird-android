@@ -1,0 +1,35 @@
+#!/bin/sh
+# scripts/hooks/pre-commit — Pre-commit hook: проверка секретов и согласованности памяти
+echo "🔍 Проверка коммита..."
+
+# 1. Проверка на случайный коммит секретов Android и ключей подписи
+SECRETS_STAGED=$(git diff --cached --name-only | grep -E '(\.jks|\.keystore|local\.properties|google-services\.json|\.env)$')
+if [ -n "$SECRETS_STAGED" ]; then
+  echo "❌ ОШИБКА: Попытка закоммитить секретные файлы или ключи подписи!"
+  echo "$SECRETS_STAGED"
+  echo "Исключите эти файлы из коммита: git reset HEAD <файл>"
+  exit 1
+fi
+
+# 2. Если менялись файлы памяти, правила или сборка — запускаем проверку памяти
+MEMORY_STAGED=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^(\.memory-bank/|CLAUDE\.md|AGENTS\.md|.*build\.gradle.*)')
+if [ -n "$MEMORY_STAGED" ]; then
+  if command -v powershell.exe >/dev/null 2>&1; then
+    powershell.exe -ExecutionPolicy Bypass -File scripts/project/Check-Memory.ps1
+    CHECK_RESULT=$?
+  elif [ -f scripts/check-memory.sh ]; then
+    bash scripts/check-memory.sh
+    CHECK_RESULT=$?
+  else
+    CHECK_RESULT=0
+  fi
+
+  if [ $CHECK_RESULT -ne 0 ]; then
+    echo "❌ Ошибка в согласовании памяти, версий или битых ссылках. Коммит прерван!"
+    exit 1
+  fi
+fi
+
+echo "✅ Быстрые проверки пройдены успешно."
+exit 0
+

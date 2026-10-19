@@ -94,3 +94,20 @@ Commit отложен до успешных обязательных прове�
 **Проверка.** `:feature:mail:sender:avatar:internal:testDebugUnitTest` — 38 тестов успешно; `:core:preference:impl:jvmTest`, полный `spotlessCheck`, `:legacy:core:compileDebugKotlin` и `:app-thunderbird:assembleFullDebug` — успешно. Полный запуск выполнил 3438 задач за 10 минут 26 секунд. Для обхода старой Windows-ошибки AIDL Gradle cache доступен через ASCII junction `C:\Projects\Mail\.tools\gradle-home`; это локальная настройка вне Git. APK скопирован в `distrib/thunderbird-full-debug.apk`: 48 577 151 байт, SHA-256 `3EFDBA3219EAEB42231BA0C7A7E217111AE7E863AB941FA0089D03CC9132870D`; `apksigner` подтвердил debug-подпись v1/v2. Телефонная проверка не выполнена: устройство не подключено.
 
 **Git.** Код, тесты и основная запись памяти сохранены коммитом `3ef8832` (`Complete trusted BIMI verification pipeline`) и отправлены в `personal/custom-brand-thunderbird-24.0`.
+
+## 2026-10-19: Устранение дефектов аудита, ADR-0009 и сквозная интеграция
+
+**Что и зачем.** Проведён независимый adversarial-аудит реализации аватаров, настроек и BIMI. Выявлены и полностью устранены 13 критических дефектов (CRIT-01..13) и 8 рисков (RISK-01..08). Восстановлена архитектурная модульность по ADR-0009: удалена зависимость `:legacy:core` от `:internal`, регистрация перенесена в `app-common` (`FeatureMailModule.kt`). `Settings.VERSION` повышен до 112 с добавлением `GeneralSettingsUpgraderTo112` для безопасной миграции резервных копий.
+
+**Безопасность и конвейер BIMI.** `BimiDiskCache` синхронизирован по потокам со сбором файлов перед удалением и отслеживанием псевдонимов. `BimiRecordResolver` корректно маппит `NX_DOMAIN` в 15-минутный negative cache, поддерживает многострочные TXT (RFC 1035) и self-asserted BIMI (`a=;`). `StrictSvgValidator` разрешает локальные градиенты (`url(#id)`) при блокировке внешних ссылок. `SafeBimiTransport` защищён от сбоев невалидных редиректов. `DefaultDmarcVerifier` реализует unfolding многострочных заголовков и удаление комментариев, присваивая `BIMI_ASSERTION` при `bimi=pass`.
+
+**Интеграция UI и аватары.** В `MessageTopView`, `MessageHeader` и списки писем внедрён `BimiLogoRepository`. В списках используется мгновенный неблокирующий метод `findCached(domain)`, не задерживающий рендеринг ViewHolders. При валидном DMARC+BIMI в заголовке отображается `sender_verified_badge` с зелёным щитом. Заглушка контакта переведена с галочки `Icons.Outlined.Check` на нейтральный `Icons.Outlined.AccountCircle`. Разделены настройки показа аватаров для списков и экрана письма (`isShowInMessageView`).
+
+**Проверка.** Все тестовые наборы выполнены успешно:
+- `:legacy:core:testDebugUnitTest --tests com.fsck.k9.preferences.GeneralSettingsDescriptionsTest`
+- `:core:preference:impl:jvmTest` (37 тестов)
+- `:feature:mail:sender:avatar:internal:testDebugUnitTest` (40 тестов)
+- `:legacy:ui:legacy:testDebugUnitTest --tests com.fsck.k9.ui.messagelist.MessageListSenderAvatarResolverTest --tests com.fsck.k9.ui.messageview.MessageViewSenderAvatarResolverTest`
+- `spotlessCheck` для всех затронутых модулей.
+
+**Сборка целевого APK.** Выполнена сборка `:app-thunderbird:assembleFullDebug` (2211 задач за 5 минут 46 секунд). Файл скопирован в `distrib/thunderbird-full-debug.apk`: 54 116 341 байт, SHA-256 `3820F07D97CC0023D5DF5D9312C51B76CB79D885FA344CA587097E93083C0893`. `apksigner` подтвердил схемы v1/v2 и подпись `Android Debug`. Готов к ручной проверке на устройстве.

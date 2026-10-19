@@ -108,6 +108,7 @@ import net.thunderbird.feature.account.avatar.AvatarMonogramCreator
 import net.thunderbird.feature.changelog.internal.RecentChangesViewModel
 import net.thunderbird.feature.mail.folder.api.OutboxFolderManager
 import net.thunderbird.feature.mail.message.list.domain.DomainContract
+import net.thunderbird.feature.mail.sender.avatar.BimiLogoRepository
 import net.thunderbird.feature.mail.message.list.ui.dialog.SetupArchiveFolderDialogFragmentFactory
 import net.thunderbird.feature.navigation.changelog.api.ChangeLogMode
 import net.thunderbird.feature.notification.api.content.InAppNotification
@@ -186,6 +187,7 @@ class LegacyMessageListFragment :
     private val avatarMonogramCreator: AvatarMonogramCreator by inject()
     private val senderAvatarSettingsPreferenceManager: SenderAvatarSettingsPreferenceManager by inject()
     private val coreSenderAvatarResolver: SenderAvatarResolver by inject()
+    private val bimiLogoRepository: BimiLogoRepository by inject()
     private val relativeDateTimeFormatter: RelativeDateTimeFormatter by inject()
 
     private val chooseFolderForMoveLauncher: ActivityResultLauncher<ChooseFolderResultContract.Input> =
@@ -409,6 +411,7 @@ class LegacyMessageListFragment :
             avatarMonogramCreator = avatarMonogramCreator,
             settingsManager = senderAvatarSettingsPreferenceManager,
             resolver = coreSenderAvatarResolver,
+            bimiLogoRepository = bimiLogoRepository,
         )
         @OptIn(ExperimentalTime::class)
         return MessageListAdapter(

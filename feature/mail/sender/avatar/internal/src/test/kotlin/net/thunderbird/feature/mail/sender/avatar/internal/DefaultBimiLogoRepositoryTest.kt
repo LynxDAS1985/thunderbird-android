@@ -5,6 +5,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
 import java.nio.file.Files
+import kotlinx.coroutines.test.runTest
 import net.thunderbird.core.preference.avatar.SenderMessageIdentity
 import net.thunderbird.core.preference.avatar.SenderVerificationMethod
 import net.thunderbird.core.preference.avatar.SenderVerificationResult
@@ -19,7 +20,7 @@ class DefaultBimiLogoRepositoryTest {
     private val validSvg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><path/></svg>".toByteArray()
 
     @Test
-    fun `does not call transport without exact DMARC verification`() {
+    fun `does not call transport without exact DMARC verification`() = runTest {
         val transport = FakeTransport(response())
         val testSubject = repository(transport)
         val request = request(verification = SenderVerificationResult.NotChecked)
@@ -31,7 +32,7 @@ class DefaultBimiLogoRepositoryTest {
     }
 
     @Test
-    fun `stores valid exact SVG and returns shield permission`() {
+    fun `stores valid exact SVG and returns shield permission`() = runTest {
         val testSubject = repository(FakeTransport(response()))
 
         val result = testSubject.load(request())
@@ -44,7 +45,7 @@ class DefaultBimiLogoRepositoryTest {
     }
 
     @Test
-    fun `permits shield only with exact DMARC and BIMI evidence`() {
+    fun `permits shield only with exact DMARC and BIMI evidence`() = runTest {
         val verification = SenderVerificationResult.Verified(
             message,
             setOf(SenderVerificationMethod.DMARC_ALIGNMENT, SenderVerificationMethod.BIMI_ASSERTION),
@@ -56,7 +57,7 @@ class DefaultBimiLogoRepositoryTest {
     }
 
     @Test
-    fun `rejects wrong status MIME oversized and dangerous SVG`() {
+    fun `rejects wrong status MIME oversized and dangerous SVG`() = runTest {
         val cases = listOf(
             response(code = 404) to BimiLogoResult.Reason.INVALID_RESPONSE,
             response(contentType = "image/png") to BimiLogoResult.Reason.INVALID_RESPONSE,
@@ -73,7 +74,7 @@ class DefaultBimiLogoRepositoryTest {
     }
 
     @Test
-    fun `uses fresh cache without network`() {
+    fun `uses fresh cache without network`() = runTest {
         var now = 1_000L
         val directory = Files.createTempDirectory("bimi-cache-test")
         repository(FakeTransport(response()), directory, { now }).load(request())
@@ -87,7 +88,7 @@ class DefaultBimiLogoRepositoryTest {
     }
 
     @Test
-    fun `uses cached PNG without rendering SVG again`() {
+    fun `uses cached PNG without rendering SVG again`() = runTest {
         val directory = Files.createTempDirectory("bimi-cache-test")
         val rasterizer = FakeRasterizer()
         repository(FakeTransport(response()), directory, rasterizer = rasterizer).load(request())
@@ -98,7 +99,7 @@ class DefaultBimiLogoRepositoryTest {
     }
 
     @Test
-    fun `rejects logo when safe rasterization fails`() {
+    fun `rejects logo when safe rasterization fails`() = runTest {
         val rasterizer = FakeRasterizer(
             BimiSvgRasterizationResult.Rejected(
                 BimiSvgRasterizationResult.Reason.RENDERING_FAILED,
@@ -111,7 +112,7 @@ class DefaultBimiLogoRepositoryTest {
     }
 
     @Test
-    fun `stale cache never permits verified shield`() {
+    fun `stale cache never permits verified shield`() = runTest {
         var now = 1_000L
         val directory = Files.createTempDirectory("bimi-cache-test")
         repository(FakeTransport(response()), directory, { now }).load(request())
@@ -126,7 +127,7 @@ class DefaultBimiLogoRepositoryTest {
     }
 
     @Test
-    fun `negative cache avoids repeated lookup until TTL expires`() {
+    fun `negative cache avoids repeated lookup until TTL expires`() = runTest {
         var now = 1_000L
         val directory = Files.createTempDirectory("bimi-cache-test")
         val resolver = FakeRecordResolver(BimiRecordLookupResult.NotFound)
@@ -144,7 +145,7 @@ class DefaultBimiLogoRepositoryTest {
     }
 
     @Test
-    fun `invalid BIMI record is negatively cached but DNS errors are not`() {
+    fun `invalid BIMI record is negatively cached but DNS errors are not`() = runTest {
         val invalidResolver = FakeRecordResolver(BimiRecordLookupResult.Invalid)
         val invalidRepository = repository(FakeTransport(response()), resolver = invalidResolver)
 

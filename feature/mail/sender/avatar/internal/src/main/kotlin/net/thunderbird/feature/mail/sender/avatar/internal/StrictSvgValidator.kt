@@ -54,8 +54,8 @@ internal class StrictSvgValidator {
                 val value = attributes.getValue(index).trim()
                 if (attributeName.startsWith("on") ||
                     attributeName == "href" || attributeName.endsWith(":href") ||
-                    value.contains("url(", ignoreCase = true) ||
-                    value.contains("@import", ignoreCase = true)
+                    value.contains("@import", ignoreCase = true) ||
+                    hasForbiddenUrl(value)
                 ) {
                     valid = false
                 }
@@ -71,9 +71,23 @@ internal class StrictSvgValidator {
             valid = false
         }
 
+        private fun hasForbiddenUrl(value: String): Boolean {
+            val matches = URL_PATTERN.findAll(value).toList()
+            if (matches.isEmpty()) {
+                return value.contains("url(", ignoreCase = true)
+            }
+            for (match in matches) {
+                val target = match.groupValues[1].trim().trim('\'', '"').trim()
+                if (!target.startsWith("#") || target.contains(":") || target.contains("/")) {
+                    return true
+                }
+            }
+            return false
+        }
+
         private fun validSquareViewBox(value: String?): Boolean {
-            val parts = value?.trim()?.split(Regex("[ ,]+"))?.mapNotNull(String::toDoubleOrNull) ?: return false
-            return parts.size == 4 && parts[2] > 0.0 && parts[2] == parts[3]
+            val parts = value?.trim()?.split(Regex("""[\s,]+"""))?.mapNotNull(String::toDoubleOrNull) ?: return false
+            return parts.size == 4 && parts.all { it.isFinite() } && parts[2] > 0.0 && parts[2] == parts[3]
         }
     }
 
@@ -84,5 +98,6 @@ internal class StrictSvgValidator {
             "set", "audio", "video", "iframe", "canvas",
         )
         private val FORBIDDEN_TEXT = Regex("<!DOCTYPE|<!ENTITY", RegexOption.IGNORE_CASE)
+        private val URL_PATTERN = Regex("""url\s*\(\s*([^)]*)\s*\)""", RegexOption.IGNORE_CASE)
     }
 }

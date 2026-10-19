@@ -38,9 +38,9 @@ class ContactPictureLoader(
                 is SenderAvatarSource.Contact -> setContactPicture(imageView, Uri.parse(source.image.key))
                 is SenderAvatarSource.Monogram -> {
                     if (fallbackAddress != null) setFallbackPicture(imageView, fallbackAddress)
-                    else imageView.setImageResource(Icons.Outlined.Check)
+                    else imageView.setImageResource(Icons.Outlined.AccountCircle)
                 }
-                SenderAvatarSource.Generic -> imageView.setImageResource(Icons.Outlined.Check)
+                SenderAvatarSource.Generic -> imageView.setImageResource(Icons.Outlined.AccountCircle)
                 is SenderAvatarSource.VerifiedBrand -> setContactPicture(imageView, Uri.parse(source.image.key))
             }
         }
