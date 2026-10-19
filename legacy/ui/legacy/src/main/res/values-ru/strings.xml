@@ -995,6 +995,8 @@
     <string name="sender_avatar_clear_cache_title">Очистить кэш логотипов</string>
     <string name="sender_avatar_clear_cache_summary">Удалить сохранённые логотипы компаний и загрузить их заново</string>
     <string name="sender_avatar_cache_cleared">Кэш логотипов очищен</string>
+    <string name="sender_avatar_cache_cleared_count">Кэш логотипов очищен (удалено файлов: %d)</string>
+    <string name="sender_avatar_verified_tooltip">Подлинный отправитель: аутентификация DMARC и BIMI успешно пройдена</string>
     <string name="changelog_latest_label_text">ПОСЛЕДНЕЕ</string>
     <string name="animation_setting_on">Включена</string>
     <string name="animation_setting_off">Отключена</string>

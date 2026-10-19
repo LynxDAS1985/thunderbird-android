@@ -65,12 +65,13 @@ class DefaultSenderAvatarSettingsPreferenceManager(
                 editor.putBoolean(SENDER_AVATAR_KEY_SHOW_IN_MESSAGE_VIEW, config.isShowInMessageView)
                 editor.putBoolean(SENDER_AVATAR_KEY_SHOW_VERIFIED_SHIELD, config.isShowVerifiedShield)
                 editor.putBoolean(SENDER_AVATAR_KEY_WIFI_ONLY, config.isBimiWifiOnly)
-                editor.commit()
+                check(editor.commit()) { "Failed to commit sender avatar preferences" }
             }
             messageListPreferencesManager.save(
                 messageListPreferencesManager.getConfig().copy(
-                    isShowContactPicture = config.isShowInMessageList,
-                    isColorizeMissingContactPictures = config.isColorizeMissing,
+                    isShowContactPicture = config.isEnabled && config.isShowInMessageList,
+                    isColorizeMissingContactPictures =
+                    config.fallbackStyle == SenderAvatarFallbackStyle.COLORED_MONOGRAM,
                 ),
             )
             notificationPreferenceManager.save(
@@ -79,6 +80,17 @@ class DefaultSenderAvatarSettingsPreferenceManager(
                 ),
             )
         } catch (e: Throwable) {
+            storageEditor?.let { editor ->
+                editor.putBoolean(SENDER_AVATAR_KEY_ENABLED, previousConfig.isEnabled)
+                editor.putBoolean(SENDER_AVATAR_KEY_SOURCE_CONTACTS, previousConfig.isSourceContactsEnabled)
+                editor.putBoolean(SENDER_AVATAR_KEY_SOURCE_BIMI, previousConfig.isSourceBimiEnabled)
+                editor.putString(SENDER_AVATAR_KEY_PRIORITY, previousConfig.priority.name)
+                editor.putString(SENDER_AVATAR_KEY_FALLBACK_STYLE, previousConfig.fallbackStyle.name)
+                editor.putBoolean(SENDER_AVATAR_KEY_SHOW_IN_MESSAGE_VIEW, previousConfig.isShowInMessageView)
+                editor.putBoolean(SENDER_AVATAR_KEY_SHOW_VERIFIED_SHIELD, previousConfig.isShowVerifiedShield)
+                editor.putBoolean(SENDER_AVATAR_KEY_WIFI_ONLY, previousConfig.isBimiWifiOnly)
+                editor.commit()
+            }
             pendingConfig.value = null
             configState.value = previousConfig
             throw e
@@ -120,10 +132,16 @@ class DefaultSenderAvatarSettingsPreferenceManager(
             SenderAvatarPriority.CONTACTS_FIRST,
         ) ?: SenderAvatarPriority.CONTACTS_FIRST
 
+        val defaultFallbackStyle = if (messageListSettings.isColorizeMissingContactPictures) {
+            SenderAvatarFallbackStyle.COLORED_MONOGRAM
+        } else {
+            SenderAvatarFallbackStyle.DEFAULT_ICON
+        }
+
         val fallbackStyle = storage?.getEnumOrDefault(
             SENDER_AVATAR_KEY_FALLBACK_STYLE,
-            SenderAvatarFallbackStyle.COLORED_MONOGRAM,
-        ) ?: SenderAvatarFallbackStyle.COLORED_MONOGRAM
+            defaultFallbackStyle,
+        ) ?: defaultFallbackStyle
 
         val isShowInMessageView = storage?.getBoolean(
             SENDER_AVATAR_KEY_SHOW_IN_MESSAGE_VIEW,
@@ -147,7 +165,7 @@ class DefaultSenderAvatarSettingsPreferenceManager(
             priority = priority,
             isShowInMessageList = messageListSettings.isShowContactPicture,
             isShowInMessageView = isShowInMessageView,
-            isColorizeMissing = messageListSettings.isColorizeMissingContactPictures,
+            isColorizeMissing = fallbackStyle == SenderAvatarFallbackStyle.COLORED_MONOGRAM,
             fallbackStyle = fallbackStyle,
             isShowInNotifications = notificationSettings.isShowContactPictureInNotification,
             isShowVerifiedShield = isShowVerifiedShield,

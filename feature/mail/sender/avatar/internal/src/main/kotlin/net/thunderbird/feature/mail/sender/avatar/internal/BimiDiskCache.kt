@@ -203,13 +203,15 @@ internal class BimiDiskCache(
     fun clear(): Long = synchronized(lock) {
         var count = 0L
         if (Files.exists(directory)) {
-            runCatching {
-                Files.list(directory).use { stream ->
-                    stream.forEach { file ->
-                        if (Files.isRegularFile(file)) {
-                            Files.deleteIfExists(file)
-                            count++
-                        }
+            val files = runCatching {
+                Files.list(directory).use { stream -> stream.toList() }
+            }.getOrDefault(emptyList())
+
+            for (file in files) {
+                if (Files.isRegularFile(file)) {
+                    val deleted = runCatching { Files.deleteIfExists(file) }.getOrDefault(false)
+                    if (deleted) {
+                        count++
                     }
                 }
             }

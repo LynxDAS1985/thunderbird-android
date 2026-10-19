@@ -139,3 +139,27 @@ Commit отложен до успешных обязательных прове�
 
 **Целевой APK.** Скопирован в `distrib/thunderbird-full-debug.apk`: 59 288 553 байт, SHA-256 `4F49CA1B7829AC7A2F2BC21773BF7EDD22D573BBA31F5955AFD3532640025C0C`, подпись v1/v2 подтверждена `apksigner`.
 
+## 2026-10-19: Устранение дефектов аудита Н1–Н12 (стабильность настроек, кэш, UI и DMARC)
+
+**Что и зачем.** По результатам строгого независимого аудита (3 субагента: Ломатель, Взгляд снаружи, Хранитель правил) выявлены и устранены 5 критических дефектов (Н1–Н5), 4 риска (Н6–Н8, Н10) и косметические недочёты (Н11–Н12).
+
+**Выполненные исправления:**
+1. **Н1 (Предотвращение падения настроек):** В `general_settings.xml` удалён `app:useSimpleSummaryProvider="true"` с `sender_avatar_priority`, что исключило `IllegalStateException: Preference already has a SummaryProvider set.` при программной смене сводки в `GeneralSettingsFragment.kt`.
+2. **Н2 (Активация DMARC/BIMI в просмотре письма):** В `MessageTopView.kt` передаётся `trustedAuthservIds`, динамически формируемый из хоста входящего сервера (`incomingServerSettings.host`), почтового домена аккаунта (`email`) и белого списка доверенных MTA (`google.com`, `yandex.ru`, `mail.ru`, `outlook.com` и др.). Ранее `trustedAuthservIds` оставался пустым, и DMARC всегда возвращал `NotChecked`.
+3. **Н3 (Отображение кэшированных логотипов в списке):** В `DefaultSenderAvatarResolver.kt` разрешён показ локально кэшированного логотипа на поверхности `MESSAGE_LIST` при статусе `NotChecked` (без значка щита, щит отображается только после проверки письма в `MESSAGE_VIEW`).
+4. **Н4 (Устранение 40dp дыры в списке при отключении аватаров):** В `DefaultSenderAvatarSettingsPreferenceManager.kt` при сохранении синхронизируется `isShowContactPicture = config.isEnabled && config.isShowInMessageList`, гарантируя схлопывание колонки аватара при выключенном главном рубильнике.
+5. **Н5 (Сохранение настроек заглушки старых пользователей):** В `createConfig` выбор заглушки по умолчанию вычисляется из `isColorizeMissingContactPictures` (если было выключено — `DEFAULT_ICON`, если включено — `COLORED_MONOGRAM`), исключая сброс выбора пользователя.
+6. **Н6 & Н11 (Асинхронная очистка кэша):** В `GeneralSettingsFragment.kt` очистка вынесена на `Dispatchers.IO` в корутине `viewLifecycleOwner.lifecycleScope` с показом точного количества удалённых файлов (`sender_avatar_cache_cleared_count`).
+7. **Н7 (Надёжная очистка файлов на Windows):** В `BimiDiskCache.clear()` поток `Files.list()` буферизуется через `.toList()` перед удалением файлов, исключая сбои `DirectoryNotEmptyException` и сбои блокировок дескрипторов.
+8. **Н8 (Атомарность сохранения настроек):** В `DefaultSenderAvatarSettingsPreferenceManager.kt` валидируется результат `editor.commit()`, а при ошибке downstream-сохранения выполняется откат к предыдущей конфигурации.
+9. **Н12 (Корректная подсказка значка верификации):** В `MessageHeader.java` для `senderVerifiedBadge` подключена строка `sender_avatar_verified_tooltip` («Подлинный отправитель: аутентификация DMARC и BIMI успешно пройдена») вместо нерелевантной строки OpenPGP-подписи.
+
+**Проверка:**
+- `:core:preference:impl:jvmTest` — 45 тестов успешно;
+- `:feature:mail:sender:avatar:internal:testDebugUnitTest` — 40 тестов успешно;
+- `:legacy:ui:legacy:testDebugUnitTest` (`MessageListSenderAvatarResolverTest`, `MessageViewSenderAvatarResolverTest`, `SenderAvatarPreferenceModeTest`) — успешно;
+- `:core:preference:impl:spotlessCheck`, `:legacy:ui:legacy:spotlessCheck`, `:feature:mail:sender:avatar:internal:spotlessCheck` — чисто;
+- Сборка `:app-thunderbird:assembleFullDebug` — успешно собрана за 2 мин 18 сек.
+
+**Целевой APK.** Скопирован в `distrib/thunderbird-full-debug.apk`: 53 892 013 байт, SHA-256 `46BE6010945699855099B562146FA78F7F4E4C8480F4DD92D7BB5A2C1597966D`, подпись v1/v2 подтверждена `apksigner`.
+

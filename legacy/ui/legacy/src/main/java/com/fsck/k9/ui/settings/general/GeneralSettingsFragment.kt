@@ -8,8 +8,12 @@ import android.view.MenuItem
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts.CreateDocument
 import androidx.core.view.MenuProvider
-import androidx.lifecycle.Lifecycle
 import android.widget.Toast
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
@@ -249,15 +253,17 @@ class GeneralSettingsFragment : PreferenceFragmentCompat() {
     private fun initializeSenderAvatarPreferences() {
         findPreference<Preference>("sender_avatar_clear_cache")?.onPreferenceClickListener =
             Preference.OnPreferenceClickListener {
-                try {
-                    bimiLogoRepository.clearCache()
-                    Toast.makeText(
-                        requireContext(),
-                        getString(R.string.sender_avatar_cache_cleared),
-                        Toast.LENGTH_SHORT,
-                    ).show()
-                } catch (e: Exception) {
-                    Log.e(e, "Error clearing BIMI logo cache")
+                viewLifecycleOwner.lifecycleScope.launch {
+                    try {
+                        val count = withContext(Dispatchers.IO) {
+                            bimiLogoRepository.clearCache()
+                        }
+                        val ctx = context ?: return@launch
+                        val message = ctx.getString(R.string.sender_avatar_cache_cleared_count, count)
+                        Toast.makeText(ctx, message, Toast.LENGTH_SHORT).show()
+                    } catch (e: Exception) {
+                        Log.e(e, "Error clearing BIMI logo cache")
+                    }
                 }
                 true
             }
@@ -280,7 +286,7 @@ class GeneralSettingsFragment : PreferenceFragmentCompat() {
             when {
                 hasContacts && hasBimi -> {
                     priorityPref?.isEnabled = true
-                    priorityPref?.summary = priorityPref?.entry
+                    priorityPref?.summary = priorityPref.entry
                 }
                 hasContacts && !hasBimi -> {
                     priorityPref?.isEnabled = false

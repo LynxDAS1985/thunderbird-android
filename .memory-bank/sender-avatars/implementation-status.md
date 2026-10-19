@@ -60,8 +60,8 @@ Resolver подключён ко всем трём вариантам списк
 ## Выполненные автоматические проверки
 
 - `:legacy:core:testDebugUnitTest --tests com.fsck.k9.preferences.GeneralSettingsDescriptionsTest` — успешно (версия 112 и миграция);
-- `:core:preference:impl:jvmTest` — успешно (42 теста: DMARC unfolding, comments, BIMI assertion, manager rollback, priority & fallback settings);
+- `:core:preference:impl:jvmTest` — успешно (45 тестов: DMARC unfolding, comments, BIMI assertion, manager rollback, priority & fallback settings, cached brand in list);
 - `:feature:mail:sender:avatar:internal:testDebugUnitTest` — успешно (40 тестов: многострочные TXT, empty `a=;`, SVG gradients, safe redirect, thread-safe cache);
 - `:legacy:ui:legacy:testDebugUnitTest` — успешно (`SenderAvatarPreferenceModeTest`, `MessageListSenderAvatarResolverTest`, `MessageViewSenderAvatarResolverTest`);
 - `spotlessCheck` / `spotlessApply` — форматирование соответствует стандартам проекта;
-- `:app-thunderbird:assembleFullDebug` — успешно собран APK в `distrib/thunderbird-full-debug.apk` (59 288 553 байт, SHA-256: `4F49CA1B7829AC7A2F2BC21773BF7EDD22D573BBA31F5955AFD3532640025C0C`, подпись v1/v2 подтверждена apksigner).
+- `:app-thunderbird:assembleFullDebug` — успешно собран APK в `distrib/thunderbird-full-debug.apk` (53 892 013 байт, SHA-256: `46BE6010945699855099B562146FA78F7F4E4C8480F4DD92D7BB5A2C1597966D`, подпись v1/v2 подтверждена apksigner).

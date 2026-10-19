@@ -288,11 +288,13 @@ class MessageTopView(
                 folderId = messageReference.folderId.toString(),
                 messageId = messageReference.uid,
             )
+            val trustedIds = buildTrustedAuthservIds(account)
             dmarcVerifier.verify(
                 DmarcVerificationRequest(
                     message = identity,
                     fromAddress = fromAddress.address,
                     authenticationResults = authHeaders.toList(),
+                    trustedAuthservIds = trustedIds,
                 ),
             )
         } else {
@@ -520,9 +522,50 @@ class MessageTopView(
         }
     }
 
+    private fun buildTrustedAuthservIds(account: LegacyAccountDto): Set<String> {
+        val trusted = mutableSetOf<String>()
+        val incomingHost = runCatching { account.incomingServerSettings.host }.getOrNull()?.lowercase()?.trim()
+        if (!incomingHost.isNullOrEmpty()) {
+            trusted.add(incomingHost)
+            val parts = incomingHost.split('.')
+            if (parts.size >= 2) {
+                trusted.add(parts.takeLast(2).joinToString("."))
+            }
+        }
+        val accountDomain = runCatching { account.email.substringAfter('@', "").lowercase().trim() }.getOrNull()
+        if (!accountDomain.isNullOrEmpty()) {
+            trusted.add(accountDomain)
+            val parts = accountDomain.split('.')
+            if (parts.size >= 2) {
+                trusted.add(parts.takeLast(2).joinToString("."))
+            }
+        }
+        trusted.addAll(WELL_KNOWN_AUTHSERV_IDS)
+        return trusted
+    }
+
     companion object {
         const val PROGRESS_MAX = 1000
         const val PROGRESS_MAX_WITH_MARGIN = 950
         const val PROGRESS_STEP_DURATION = 180
+
+        private val WELL_KNOWN_AUTHSERV_IDS = setOf(
+            "google.com",
+            "mx.google.com",
+            "yandex.ru",
+            "mail.yandex.ru",
+            "mx.yandex.ru",
+            "mail.ru",
+            "mx.mail.ru",
+            "outlook.com",
+            "protection.outlook.com",
+            "hotmail.com",
+            "icloud.com",
+            "apple.com",
+            "fastmail.com",
+            "messagingengine.com",
+            "protonmail.ch",
+            "proton.me",
+        )
     }
 }

@@ -71,12 +71,32 @@ class DefaultSenderAvatarResolverTest {
     }
 
     @Test
-    fun `never uses badge when message was not checked`() {
-        val request = request(verifiedBrandImage = BRAND_IMAGE)
+    fun `never uses brand or badge in message view when message was not checked`() {
+        val request = request(
+            surface = SenderAvatarSurface.MESSAGE_VIEW,
+            verifiedBrandImage = BRAND_IMAGE,
+        )
 
         val result = testSubject.resolve(request)
 
         assertThat(result).isEqualTo(SenderAvatarResolution.Visible(SenderAvatarSource.Generic))
+    }
+
+    @Test
+    fun `uses cached brand without badge in message list when message was not checked`() {
+        val request = request(
+            surface = SenderAvatarSurface.MESSAGE_LIST,
+            verifiedBrandImage = BRAND_IMAGE,
+        )
+
+        val result = testSubject.resolve(request)
+
+        assertThat(result).isEqualTo(
+            SenderAvatarResolution.Visible(
+                source = SenderAvatarSource.VerifiedBrand(BRAND_IMAGE),
+                badge = SenderVerificationBadge.None,
+            ),
+        )
     }
 
     @Test

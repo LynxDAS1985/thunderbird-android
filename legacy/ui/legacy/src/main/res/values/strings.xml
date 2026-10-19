@@ -187,6 +187,8 @@
     <string name="sender_avatar_clear_cache_title">Clear logo cache</string>
     <string name="sender_avatar_clear_cache_summary">Delete cached company logos and reload them</string>
     <string name="sender_avatar_cache_cleared">Logo cache cleared</string>
+    <string name="sender_avatar_cache_cleared_count">Logo cache cleared (%d items removed)</string>
+    <string name="sender_avatar_verified_tooltip">Verified sender: DMARC and BIMI authentication passed</string>
     <string name="notification_actions_settings_description">Reorder notification actions.</string>
     <string name="notification_actions_cutoff_description">Shown actions cutoff</string>
     <string name="notification_actions_cutoff_state">Actions above this line are shown in the notification</string>

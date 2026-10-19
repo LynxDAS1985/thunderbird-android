@@ -33,10 +33,17 @@ class DefaultSenderAvatarSettingsPreferenceManagerTest {
                         scope = backgroundScope,
                     )
 
+                    val expectedFallback = if (colorizeMissing) {
+                        SenderAvatarFallbackStyle.COLORED_MONOGRAM
+                    } else {
+                        SenderAvatarFallbackStyle.DEFAULT_ICON
+                    }
+
                     assertThat(manager.getConfig()).isEqualTo(
                         SenderAvatarSettings(
                             isShowInMessageList = showInMessageList,
                             isColorizeMissing = colorizeMissing,
+                            fallbackStyle = expectedFallback,
                             isShowInNotifications = showInNotifications,
                         ),
                     )
@@ -79,6 +86,7 @@ class DefaultSenderAvatarSettingsPreferenceManagerTest {
             SenderAvatarSettings(
                 isShowInMessageList = false,
                 isColorizeMissing = false,
+                fallbackStyle = SenderAvatarFallbackStyle.DEFAULT_ICON,
                 isShowInNotifications = false,
             ),
         )
@@ -106,6 +114,7 @@ class DefaultSenderAvatarSettingsPreferenceManagerTest {
         val expected = SenderAvatarSettings(
             isShowInMessageList = false,
             isColorizeMissing = false,
+            fallbackStyle = SenderAvatarFallbackStyle.DEFAULT_ICON,
             isShowInNotifications = false,
         )
 
@@ -120,6 +129,38 @@ class DefaultSenderAvatarSettingsPreferenceManagerTest {
         advanceUntilIdle()
 
         assertThat(manager.getConfig()).isEqualTo(expected)
+    }
+
+    @Test
+    fun `save when isEnabled is false collapses messageList isShowContactPicture`() = runTest {
+        val messageListManager = FakeMessageListPreferencesManager(
+            DisplayMessageListSettings(isShowContactPicture = true),
+        )
+        val notificationManager = FakeNotificationPreferenceManager(NotificationPreference())
+        val manager = createManager(messageListManager, notificationManager, backgroundScope)
+
+        manager.save(
+            SenderAvatarSettings(
+                isEnabled = false,
+                isShowInMessageList = true,
+            ),
+        )
+
+        assertThat(messageListManager.getConfig().isShowContactPicture).isEqualTo(false)
+    }
+
+    @Test
+    fun `getConfig defaults fallbackStyle to DEFAULT_ICON when colorize missing was false`() = runTest {
+        val manager = createManager(
+            messageListSettings = DisplayMessageListSettings(
+                isColorizeMissingContactPictures = false,
+            ),
+            notificationSettings = NotificationPreference(),
+            scope = backgroundScope,
+        )
+
+        assertThat(manager.getConfig().fallbackStyle).isEqualTo(SenderAvatarFallbackStyle.DEFAULT_ICON)
+        assertThat(manager.getConfig().isColorizeMissing).isEqualTo(false)
     }
 
     @Test
@@ -141,6 +182,7 @@ class DefaultSenderAvatarSettingsPreferenceManagerTest {
                 SenderAvatarSettings(
                     isShowInMessageList = false,
                     isColorizeMissing = false,
+                    fallbackStyle = SenderAvatarFallbackStyle.DEFAULT_ICON,
                 ),
             )
 
@@ -151,6 +193,7 @@ class DefaultSenderAvatarSettingsPreferenceManagerTest {
                 SenderAvatarSettings(
                     isShowInMessageList = false,
                     isColorizeMissing = false,
+                    fallbackStyle = SenderAvatarFallbackStyle.DEFAULT_ICON,
                     isShowInNotifications = false,
                 ),
             )

@@ -441,7 +441,6 @@
                 android:entryValues="@array/sender_avatar_priority_values"
                 android:key="sender_avatar_priority"
                 android:title="@string/sender_avatar_priority_title"
-                app:useSimpleSummaryProvider="true"
                 />
 
         </PreferenceCategory>

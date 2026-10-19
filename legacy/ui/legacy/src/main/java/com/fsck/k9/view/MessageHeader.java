@@ -94,7 +94,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         if (senderVerifiedBadge != null) {
             TooltipCompat.setTooltipText(
                 senderVerifiedBadge,
-                getContext().getString(R.string.crypto_msg_encrypted_sign_verified)
+                getContext().getString(R.string.sender_avatar_verified_tooltip)
             );
         }
         cryptoStatusIcon = findViewById(R.id.crypto_status_icon);

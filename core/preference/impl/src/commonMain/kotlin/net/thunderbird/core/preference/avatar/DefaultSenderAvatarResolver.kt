@@ -23,10 +23,18 @@ class DefaultSenderAvatarResolver : SenderAvatarResolver {
             SenderVerificationBadge.None
         }
 
+        val allowBrand = verifiedBrandImage != null && (
+            verification != null ||
+                (
+                    request.surface == SenderAvatarSurface.MESSAGE_LIST &&
+                        request.verification is SenderVerificationResult.NotChecked
+                    )
+            )
+
         if (request.settings.priority == SenderAvatarPriority.BIMI_FIRST) {
-            if (verifiedBrandImage != null && verification != null) {
+            if (allowBrand) {
                 return SenderAvatarResolution.Visible(
-                    source = SenderAvatarSource.VerifiedBrand(verifiedBrandImage),
+                    source = SenderAvatarSource.VerifiedBrand(checkNotNull(verifiedBrandImage)),
                     badge = badge,
                 )
             }
@@ -37,9 +45,9 @@ class DefaultSenderAvatarResolver : SenderAvatarResolver {
             if (contactImage != null) {
                 return SenderAvatarResolution.Visible(SenderAvatarSource.Contact(contactImage))
             }
-            if (verifiedBrandImage != null && verification != null) {
+            if (allowBrand) {
                 return SenderAvatarResolution.Visible(
-                    source = SenderAvatarSource.VerifiedBrand(verifiedBrandImage),
+                    source = SenderAvatarSource.VerifiedBrand(checkNotNull(verifiedBrandImage)),
                     badge = badge,
                 )
             }

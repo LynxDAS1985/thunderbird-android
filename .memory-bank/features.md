@@ -68,5 +68,7 @@ BIMI теперь кэширует отсутствие/ошибочную за�
 5. **Места показа**: чекбоксы «В списке писем», «В уведомлениях», «В открытом письме».
 6. **Безопасность и сеть**: чекбокс «Значок подтверждения» (зелёный щит), «Загружать только по Wi-Fi» (привязано к BIMI), кнопка действия «Очистить кэш логотипов» с вызовом `BimiLogoRepository.clearCache()` и всплывающим уведомлением.
 
-Проверено: `:core:preference:api:jvmTest`, `:core:preference:impl:jvmTest` (42 теста), `:legacy:ui:legacy:testDebugUnitTest`, `spotlessCheck`. Собран целевой APK: `distrib/thunderbird-full-debug.apk` (59 288 553 байт, SHA-256 `4F49CA1B7829AC7A2F2BC21773BF7EDD22D573BBA31F5955AFD3532640025C0C`, подпись v1/v2 подтверждена).
+Проверено: `:core:preference:api:jvmTest`, `:core:preference:impl:jvmTest` (45 тестов), `:feature:mail:sender:avatar:internal:testDebugUnitTest` (40 тестов), `:legacy:ui:legacy:testDebugUnitTest`, `spotlessCheck`. По результатам аудита устранены дефекты Н1–Н12 (исключено падение при настройке приоритета, активирован DMARC с доверенными MTAs в просмотре письма, поддержаны кэшированные логотипы в списке, схлопывание отступа при отключении и сохранение пользовательского стиля заглушки).
+
+Собран целевой APK: `distrib/thunderbird-full-debug.apk` (53 892 013 байт, SHA-256 `46BE6010945699855099B562146FA78F7F4E4C8480F4DD92D7BB5A2C1597966D`, подпись v1/v2 подтверждена apksigner).
 
