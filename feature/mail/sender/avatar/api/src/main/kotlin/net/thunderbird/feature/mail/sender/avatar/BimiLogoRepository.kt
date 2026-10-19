@@ -8,6 +8,8 @@ interface BimiLogoRepository {
     suspend fun load(request: BimiLogoRequest): BimiLogoResult
 
     fun findCached(domain: String, selector: String = "default"): SenderAvatarImage?
+
+    fun clearCache(): Long
 }
 
 data class BimiLogoRequest(

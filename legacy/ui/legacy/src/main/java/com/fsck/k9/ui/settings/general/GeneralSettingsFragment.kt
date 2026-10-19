@@ -9,9 +9,12 @@ import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts.CreateDocument
 import androidx.core.view.MenuProvider
 import androidx.lifecycle.Lifecycle
+import android.widget.Toast
+import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceScreen
+import androidx.preference.SwitchPreferenceCompat
 import androidx.work.WorkInfo
 import app.k9mail.feature.telemetry.api.TelemetryManager
 import com.fsck.k9.job.K9JobManager
@@ -28,6 +31,8 @@ import java.util.Calendar
 import java.util.Locale
 import net.thunderbird.core.featureflag.FeatureFlagProvider
 import net.thunderbird.core.featureflag.keys.GeneratedFeatureFlagKey
+import net.thunderbird.feature.mail.sender.avatar.BimiLogoRepository
+import net.thunderbird.legacy.logging.Log
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -37,6 +42,7 @@ class GeneralSettingsFragment : PreferenceFragmentCompat() {
     private val telemetryManager: TelemetryManager by inject()
     private val featureFlagProvider: FeatureFlagProvider by inject()
     private val jobManager: K9JobManager by inject()
+    private val bimiLogoRepository: BimiLogoRepository by inject()
 
     private var rootKey: String? = null
     private var currentUiState: GeneralSettingsUiState? = null
@@ -113,6 +119,7 @@ class GeneralSettingsFragment : PreferenceFragmentCompat() {
             SenderAvatarPreferenceMode.Unified -> {
                 findPreference<Preference>(LEGACY_SENDER_AVATAR_MESSAGE_LIST_PREFERENCES)?.remove()
                 findPreference<Preference>(LEGACY_SENDER_AVATAR_NOTIFICATION_PREFERENCES)?.remove()
+                initializeSenderAvatarPreferences()
             }
 
             SenderAvatarPreferenceMode.Legacy -> {
@@ -237,6 +244,76 @@ class GeneralSettingsFragment : PreferenceFragmentCompat() {
             DEFAULT_SYNC_FILENAME,
             SimpleDateFormat("yyyy-MM-dd", Locale.US).format(now.time),
         )
+    }
+
+    private fun initializeSenderAvatarPreferences() {
+        findPreference<Preference>("sender_avatar_clear_cache")?.onPreferenceClickListener =
+            Preference.OnPreferenceClickListener {
+                try {
+                    bimiLogoRepository.clearCache()
+                    Toast.makeText(
+                        requireContext(),
+                        getString(R.string.sender_avatar_cache_cleared),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                } catch (e: Exception) {
+                    Log.e(e, "Error clearing BIMI logo cache")
+                }
+                true
+            }
+
+        val masterSwitch = findPreference<SwitchPreferenceCompat>("sender_avatars_enabled")
+        val contactsSwitch = findPreference<SwitchPreferenceCompat>("sender_avatar_source_contacts")
+        val bimiSwitch = findPreference<SwitchPreferenceCompat>("sender_avatar_source_bimi")
+        val priorityPref = findPreference<ListPreference>("sender_avatar_priority")
+
+        fun updatePrioritySummaryAndState() {
+            val isMasterOn = masterSwitch?.isChecked ?: true
+            val hasContacts = contactsSwitch?.isChecked ?: true
+            val hasBimi = bimiSwitch?.isChecked ?: true
+
+            if (!isMasterOn) {
+                priorityPref?.isEnabled = false
+                return
+            }
+
+            when {
+                hasContacts && hasBimi -> {
+                    priorityPref?.isEnabled = true
+                    priorityPref?.summary = priorityPref?.entry
+                }
+                hasContacts && !hasBimi -> {
+                    priorityPref?.isEnabled = false
+                    priorityPref?.summary = getString(R.string.sender_avatar_priority_contacts_only)
+                }
+                !hasContacts && hasBimi -> {
+                    priorityPref?.isEnabled = false
+                    priorityPref?.summary = getString(R.string.sender_avatar_priority_bimi_only)
+                }
+                else -> {
+                    priorityPref?.isEnabled = false
+                    priorityPref?.summary = getString(R.string.sender_avatar_priority_none)
+                }
+            }
+        }
+
+        updatePrioritySummaryAndState()
+
+        val dynamicUpdateListener = Preference.OnPreferenceChangeListener { _, _ ->
+            view?.post { updatePrioritySummaryAndState() }
+            true
+        }
+
+        masterSwitch?.onPreferenceChangeListener = dynamicUpdateListener
+        contactsSwitch?.onPreferenceChangeListener = dynamicUpdateListener
+        bimiSwitch?.onPreferenceChangeListener = dynamicUpdateListener
+        priorityPref?.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, newValue ->
+            view?.post {
+                priorityPref.value = newValue as? String
+                updatePrioritySummaryAndState()
+            }
+            true
+        }
     }
 
     companion object {

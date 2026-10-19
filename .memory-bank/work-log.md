@@ -111,3 +111,31 @@ Commit отложен до успешных обязательных прове�
 - `spotlessCheck` для всех затронутых модулей.
 
 **Сборка целевого APK.** Выполнена сборка `:app-thunderbird:assembleFullDebug` (2211 задач за 5 минут 46 секунд). Файл скопирован в `distrib/thunderbird-full-debug.apk`: 54 116 341 байт, SHA-256 `3820F07D97CC0023D5DF5D9312C51B76CB79D885FA344CA587097E93083C0893`. `apksigner` подтвердил схемы v1/v2 и подпись `Android Debug`. Готов к ручной проверке на устройстве.
+
+## 2026-10-19: Полноценный экран настроек аватаров и исправление иконки меню
+
+**Что и зачем.** Выявлено несоответствие экрана «Аватары отправителей» утверждённым макетам `docs/design/` (присутствовали только 3 старых чекбокса) и отсутствие иконки в меню «Основные». Цель — восстановить иконку и реализовать полный экран со всеми секциями и состояниями по спецификации.
+
+**Как работает и UI-логика.**
+1. В `general_settings.xml` исправлена ссылка на иконку: вместо отсутствующей `@drawable/ic_account_color` подключена `@drawable/ic_account_circle`.
+2. Реализована полная иерархия экрана:
+   - Мастер-переключатель `sender_avatars_enabled` («Показывать аватары»);
+   - Источники: `sender_avatars_source_contacts` («Фото из контактов») и `sender_avatars_source_bimi` («Проверенные логотипы компаний (BIMI)»);
+   - Приоритет: `sender_avatars_priority` («Сначала фото из контактов» / «Сначала логотипы компаний»). Автоматически блокируется и меняет пояснение, если активен только один или ноль источников;
+   - Запасной вариант: `sender_avatars_fallback_style` («Цветной круг с буквой» / «Стандартная иконка»);
+   - Места показа: `sender_avatars_show_in_message_list`, `sender_avatars_show_in_notifications`, `sender_avatars_show_in_message_view`;
+   - Безопасность и сеть: `sender_avatars_show_verified_shield`, `sender_avatars_bimi_wifi_only`, кнопка «Очистить кэш логотипов».
+3. В `BimiDiskCache` и `BimiLogoRepository` добавлен метод `clearCache(): Long`.
+4. В `GeneralSettingsFragment` подключена очистка кэша с показом Toast с количеством удалённых файлов и динамическое обновление состояния списка приоритетов.
+5. `DefaultSenderAvatarResolver` и `DefaultSenderAvatarSettingsPreferenceManager` обновлены для поддержки всех новых параметров с сохранением полной обратной совместимости.
+
+**Проверка.**
+- `:core:preference:api:jvmTest` — успешно;
+- `:core:preference:impl:jvmTest` — 42 теста успешно (добавлены тесты приоритета и fallback);
+- `:feature:mail:sender:avatar:internal:testDebugUnitTest` — 40 тестов успешно;
+- `:legacy:ui:legacy:testDebugUnitTest` — успешно (`SenderAvatarPreferenceModeTest`, `MessageListSenderAvatarResolverTest`, `MessageViewSenderAvatarResolverTest`);
+- `spotlessCheck` — успешно для всех модулей;
+- Сборка `:app-thunderbird:assembleFullDebug` — успешно собрана за 3 мин 47 сек.
+
+**Целевой APK.** Скопирован в `distrib/thunderbird-full-debug.apk`: 59 288 553 байт, SHA-256 `4F49CA1B7829AC7A2F2BC21773BF7EDD22D573BBA31F5955AFD3532640025C0C`, подпись v1/v2 подтверждена `apksigner`.
+

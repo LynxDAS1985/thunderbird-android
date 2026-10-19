@@ -200,6 +200,23 @@ internal class BimiDiskCache(
         return NegativeEntry(reason, expiresAt)
     }
 
+    fun clear(): Long = synchronized(lock) {
+        var count = 0L
+        if (Files.exists(directory)) {
+            runCatching {
+                Files.list(directory).use { stream ->
+                    stream.forEach { file ->
+                        if (Files.isRegularFile(file)) {
+                            Files.deleteIfExists(file)
+                            count++
+                        }
+                    }
+                }
+            }
+        }
+        count
+    }
+
     private fun removeNegative(path: Path): NegativeEntry? {
         Files.deleteIfExists(path)
         return null

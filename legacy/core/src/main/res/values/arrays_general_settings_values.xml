@@ -245,4 +245,14 @@
         <item>TEXT_PLAIN</item>
     </string-array>
 
+    <string-array name="sender_avatar_priority_values" translatable="false">
+        <item>CONTACTS_FIRST</item>
+        <item>BIMI_FIRST</item>
+    </string-array>
+
+    <string-array name="sender_avatar_fallback_style_values" translatable="false">
+        <item>COLORED_MONOGRAM</item>
+        <item>DEFAULT_ICON</item>
+    </string-array>
+
 </resources>

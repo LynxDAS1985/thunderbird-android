@@ -7,19 +7,46 @@ package net.thunderbird.core.preference.avatar
  */
 class DefaultSenderAvatarResolver : SenderAvatarResolver {
     override fun resolve(request: SenderAvatarRequest): SenderAvatarResolution {
+        if (!request.settings.isEnabled) return SenderAvatarResolution.Hidden
         if (!request.settings.isEnabledFor(request.surface)) return SenderAvatarResolution.Hidden
 
-        request.contactImage?.let { image ->
-            return SenderAvatarResolution.Visible(SenderAvatarSource.Contact(image))
+        val hasContacts = request.settings.isSourceContactsEnabled
+        val hasBimi = request.settings.isSourceBimiEnabled
+
+        val contactImage = if (hasContacts) request.contactImage else null
+        val verifiedBrandImage = if (hasBimi) request.verifiedBrandImage else null
+        val verification = if (hasBimi) request.verification.validFor(request.message) else null
+
+        val badge = if (request.settings.isShowVerifiedShield && verification != null) {
+            SenderVerificationBadge.Verified(verification.methods)
+        } else {
+            SenderVerificationBadge.None
         }
 
-        val verification = request.verification.validFor(request.message)
-        val verifiedBrandImage = request.verifiedBrandImage
-        if (verifiedBrandImage != null && verification != null) {
-            return SenderAvatarResolution.Visible(
-                source = SenderAvatarSource.VerifiedBrand(verifiedBrandImage),
-                badge = SenderVerificationBadge.Verified(verification.methods),
-            )
+        if (request.settings.priority == SenderAvatarPriority.BIMI_FIRST) {
+            if (verifiedBrandImage != null && verification != null) {
+                return SenderAvatarResolution.Visible(
+                    source = SenderAvatarSource.VerifiedBrand(verifiedBrandImage),
+                    badge = badge,
+                )
+            }
+            if (contactImage != null) {
+                return SenderAvatarResolution.Visible(SenderAvatarSource.Contact(contactImage))
+            }
+        } else {
+            if (contactImage != null) {
+                return SenderAvatarResolution.Visible(SenderAvatarSource.Contact(contactImage))
+            }
+            if (verifiedBrandImage != null && verification != null) {
+                return SenderAvatarResolution.Visible(
+                    source = SenderAvatarSource.VerifiedBrand(verifiedBrandImage),
+                    badge = badge,
+                )
+            }
+        }
+
+        if (request.settings.fallbackStyle == SenderAvatarFallbackStyle.DEFAULT_ICON) {
+            return SenderAvatarResolution.Visible(SenderAvatarSource.Generic)
         }
 
         val monogram = request.monogram?.trim()?.takeIf(String::isNotEmpty)

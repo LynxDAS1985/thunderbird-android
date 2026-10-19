@@ -15,6 +15,8 @@ import net.thunderbird.core.preference.GeneralSettingsManager
 import net.thunderbird.core.preference.LockScreenNotificationVisibility
 import net.thunderbird.core.preference.SplitViewMode
 import net.thunderbird.core.preference.SubTheme
+import net.thunderbird.core.preference.avatar.SenderAvatarFallbackStyle
+import net.thunderbird.core.preference.avatar.SenderAvatarPriority
 import net.thunderbird.core.preference.avatar.SenderAvatarSettings
 import net.thunderbird.core.preference.avatar.SenderAvatarSettingsPreferenceManager
 import net.thunderbird.core.preference.display.visualSettings.message.list.MessageListDateTimeFormat
@@ -56,6 +58,12 @@ class GeneralSettingsDataStore(
             "messagelist_change_contact_name_color" -> messageListSettings.isChangeContactNameColor
             "messagelist_show_contact_picture" -> senderAvatarSettings.isShowInMessageList
             "messagelist_colorize_missing_contact_pictures" -> senderAvatarSettings.isColorizeMissing
+            "sender_avatars_enabled" -> senderAvatarSettings.isEnabled
+            "sender_avatar_source_contacts" -> senderAvatarSettings.isSourceContactsEnabled
+            "sender_avatar_source_bimi" -> senderAvatarSettings.isSourceBimiEnabled
+            "sender_avatar_show_in_message_view" -> senderAvatarSettings.isShowInMessageView
+            "sender_avatar_show_verified_shield" -> senderAvatarSettings.isShowVerifiedShield
+            "sender_avatar_wifi_only" -> senderAvatarSettings.isBimiWifiOnly
             "messagelist_background_as_unread_indicator" -> messageListSettings.isUseBackgroundAsUnreadIndicator
             "show_compose_button" -> inboxSettings.isShowComposeButtonOnMessageList
             "threaded_view" -> inboxSettings.isThreadedViewEnabled
@@ -94,8 +102,17 @@ class GeneralSettingsDataStore(
             "messagelist_change_contact_name_color" -> setIsChangeContactNameColor(isChangeContactNameColor = value)
             "messagelist_show_contact_picture" -> updateSenderAvatarSettings { copy(isShowInMessageList = value) }
             "messagelist_colorize_missing_contact_pictures" -> updateSenderAvatarSettings {
-                copy(isColorizeMissing = value)
+                copy(
+                    isColorizeMissing = value,
+                    fallbackStyle = if (value) SenderAvatarFallbackStyle.COLORED_MONOGRAM else SenderAvatarFallbackStyle.DEFAULT_ICON,
+                )
             }
+            "sender_avatars_enabled" -> updateSenderAvatarSettings { copy(isEnabled = value) }
+            "sender_avatar_source_contacts" -> updateSenderAvatarSettings { copy(isSourceContactsEnabled = value) }
+            "sender_avatar_source_bimi" -> updateSenderAvatarSettings { copy(isSourceBimiEnabled = value) }
+            "sender_avatar_show_in_message_view" -> updateSenderAvatarSettings { copy(isShowInMessageView = value) }
+            "sender_avatar_show_verified_shield" -> updateSenderAvatarSettings { copy(isShowVerifiedShield = value) }
+            "sender_avatar_wifi_only" -> updateSenderAvatarSettings { copy(isBimiWifiOnly = value) }
 
             "messagelist_background_as_unread_indicator" -> setIsUseBackgroundAsUnreadIndicator(
                 isUseBackgroundAsUnreadIndicator = value,
@@ -185,6 +202,8 @@ class GeneralSettingsDataStore(
             "message_list_density" -> messageListSettings.uiDensity.toString()
             "post_remove_navigation" -> interactionSettings.messageViewPostRemoveNavigation
             "post_mark_as_unread_navigation" -> interactionSettings.messageViewPostMarkAsUnreadNavigation.name
+            "sender_avatar_priority" -> senderAvatarSettingsPreferenceManager.getConfig().priority.name
+            "sender_avatar_fallback_style" -> senderAvatarSettingsPreferenceManager.getConfig().fallbackStyle.name
             else -> defValue
         }
     }
@@ -211,6 +230,21 @@ class GeneralSettingsDataStore(
 
             "background_ops" -> setBackgroundOps(value)
             "messageview_body_content_type" -> setBodyContentType(value)
+            "sender_avatar_priority" -> {
+                runCatching { SenderAvatarPriority.valueOf(value) }.getOrNull()?.let { priority ->
+                    updateSenderAvatarSettings { copy(priority = priority) }
+                }
+            }
+            "sender_avatar_fallback_style" -> {
+                runCatching { SenderAvatarFallbackStyle.valueOf(value) }.getOrNull()?.let { style ->
+                    updateSenderAvatarSettings {
+                        copy(
+                            fallbackStyle = style,
+                            isColorizeMissing = (style == SenderAvatarFallbackStyle.COLORED_MONOGRAM),
+                        )
+                    }
+                }
+            }
             "quiet_time_starts" -> setQuietTimeStarts(quietTimeStarts = value)
             "quiet_time_ends" -> setQuietTimeEnds(quietTimeEnds = value)
             "message_list_subject_font" -> K9.fontSizes.messageListSubject = value.toInt()

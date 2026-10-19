@@ -33,6 +33,8 @@ internal class DefaultBimiLogoRepository(
         return cache.findCachedPng(aliasKey)?.let { SenderAvatarImage(it.toUri().toString()) }
     }
 
+    override fun clearCache(): Long = cache.clear()
+
     override suspend fun load(request: BimiLogoRequest): BimiLogoResult = withContext(ioDispatcher) {
         if (!BimiSecurity.acceptsVerifiedMessage(request)) {
             Timber.d("BIMI rejected: message not verified")

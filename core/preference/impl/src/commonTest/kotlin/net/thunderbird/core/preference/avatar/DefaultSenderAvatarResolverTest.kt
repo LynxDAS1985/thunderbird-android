@@ -121,6 +121,108 @@ class DefaultSenderAvatarResolverTest {
     }
 
     @Test
+    fun `hides avatar when master switch is disabled`() {
+        val settings = SenderAvatarSettings(isEnabled = false)
+        val result = testSubject.resolve(request(settings = settings, contactImage = CONTACT_IMAGE))
+
+        assertThat(result).isEqualTo(SenderAvatarResolution.Hidden)
+    }
+
+    @Test
+    fun `ignores contact image when contact source is disabled`() {
+        val settings = SenderAvatarSettings(isSourceContactsEnabled = false)
+        val result = testSubject.resolve(request(settings = settings, contactImage = CONTACT_IMAGE, monogram = "AC"))
+
+        assertThat(result).isEqualTo(
+            SenderAvatarResolution.Visible(SenderAvatarSource.Monogram("AC", useContactColor = true)),
+        )
+    }
+
+    @Test
+    fun `ignores brand image when bimi source is disabled`() {
+        val settings = SenderAvatarSettings(isSourceBimiEnabled = false)
+        val result = testSubject.resolve(
+            request(
+                settings = settings,
+                verifiedBrandImage = BRAND_IMAGE,
+                verification = verified(MESSAGE),
+                monogram = "AC",
+            ),
+        )
+
+        assertThat(result).isEqualTo(
+            SenderAvatarResolution.Visible(SenderAvatarSource.Monogram("AC", useContactColor = true)),
+        )
+    }
+
+    @Test
+    fun `prioritizes bimi over contacts when priority is BIMI_FIRST`() {
+        val settings = SenderAvatarSettings(priority = SenderAvatarPriority.BIMI_FIRST)
+        val verification = verified(MESSAGE)
+        val result = testSubject.resolve(
+            request(
+                settings = settings,
+                contactImage = CONTACT_IMAGE,
+                verifiedBrandImage = BRAND_IMAGE,
+                verification = verification,
+            ),
+        )
+
+        assertThat(result).isEqualTo(
+            SenderAvatarResolution.Visible(
+                source = SenderAvatarSource.VerifiedBrand(BRAND_IMAGE),
+                badge = SenderVerificationBadge.Verified(verification.methods),
+            ),
+        )
+    }
+
+    @Test
+    fun `prioritizes contacts over bimi when priority is CONTACTS_FIRST`() {
+        val settings = SenderAvatarSettings(priority = SenderAvatarPriority.CONTACTS_FIRST)
+        val verification = verified(MESSAGE)
+        val result = testSubject.resolve(
+            request(
+                settings = settings,
+                contactImage = CONTACT_IMAGE,
+                verifiedBrandImage = BRAND_IMAGE,
+                verification = verification,
+            ),
+        )
+
+        assertThat(result).isEqualTo(
+            SenderAvatarResolution.Visible(SenderAvatarSource.Contact(CONTACT_IMAGE)),
+        )
+    }
+
+    @Test
+    fun `omits badge when isShowVerifiedShield is false`() {
+        val settings = SenderAvatarSettings(isShowVerifiedShield = false)
+        val verification = verified(MESSAGE)
+        val result = testSubject.resolve(
+            request(
+                settings = settings,
+                verifiedBrandImage = BRAND_IMAGE,
+                verification = verification,
+            ),
+        )
+
+        assertThat(result).isEqualTo(
+            SenderAvatarResolution.Visible(
+                source = SenderAvatarSource.VerifiedBrand(BRAND_IMAGE),
+                badge = SenderVerificationBadge.None,
+            ),
+        )
+    }
+
+    @Test
+    fun `uses generic silhouette when fallbackStyle is DEFAULT_ICON`() {
+        val settings = SenderAvatarSettings(fallbackStyle = SenderAvatarFallbackStyle.DEFAULT_ICON)
+        val result = testSubject.resolve(request(settings = settings, monogram = "AB"))
+
+        assertThat(result).isEqualTo(SenderAvatarResolution.Visible(SenderAvatarSource.Generic))
+    }
+
+    @Test
     fun `rejects verified result without evidence`() {
         assertFailsWith<IllegalArgumentException> {
             SenderVerificationResult.Verified(message = MESSAGE, methods = emptySet())

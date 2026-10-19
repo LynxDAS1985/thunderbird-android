@@ -21,15 +21,15 @@ Resolver подключён ко всем трём вариантам списк
 |---|---|---|---|
 | 0. Требования и безопасность | [x] | План, макеты, ограничения BIMI, ADR-0009 и правила безопасности полностью соблюдены | Завершено |
 | 1. Модель настроек | [x] | Добавлены модель, manager, потребитель в `GeneralSettingsDataStore`, согласованная публикация, `UpgraderTo112`, атомарный откат при сбое | Завершено на уровне JVM/Android |
-| 2. Единый экран | [x] | Создан экран; флаг переключает unified/legacy без потери ключей; настройка уведомлений в backup | Завершено |
+| 2. Единый экран | [x] | Экран полностью реализован по макетам (Мастер-переключатель, Источники, Приоритет, Запасной вариант, Места показа, Безопасность и сеть, Очистка кэша); исправлена иконка в меню «Основные»; настроена динамическая блокировка зависимых параметров | Завершено |
 | 3. Resolver без сети | [x] | API, приоритет источников, привязка проверки к письму, unit-тесты и интеграция с BIMI-кэшем готовы | Завершено |
 | 4. Все варианты списка | [x] | Legacy View, встроенный Compose и новый Compose используют resolver и быстрый синхронный `findCached` | Завершено |
 | 5. Открытое письмо и участники | [x] | Заголовок и `MessageTopView` вызывают `dmarcVerifier` и `BimiLogoRepository`, отображают `sender_verified_badge` и логотип | Завершено |
 | 6. Уведомления | [x] | Одиночное уведомление передаёт точную ссылку на письмо и реальный URI контакта | Завершено |
-| 7. BIMI и кэш | [x] | Потокобезопасный `BimiDiskCache`, 15-мин negative cache (`NX_DOMAIN` -> `NotFound`), поддержка multi-string TXT, SVG url(#id) и `a=;` | Завершено |
+| 7. BIMI и кэш | [x] | Потокобезопасный `BimiDiskCache`, 15-мин negative cache (`NX_DOMAIN` -> `NotFound`), поддержка multi-string TXT, SVG url(#id) и `a=;`, метод очистки кэша `clearCache()` | Завершено |
 | 8. Подтверждение и щит | [x] | Реализован строгий DMARC verifier, multiline unfolding, комментарии, `BIMI_ASSERTION` статус и показ щита | Завершено |
 | 9. Устойчивость | [x] | Тесты concurrency кэша, safe redirect, rollback транзакций настроек, обработка повреждений файлов | Завершено |
-| 10. Выпуск | [~] | Готовы debug и full сборки; `Settings.VERSION = 112`; feature flag под контролем | Требуется ручная приёмка на физическом устройстве |
+| 10. Выпуск | [~] | Готовы debug и full сборки; `Settings.VERSION = 112`; feature flag под контролем; Full Debug APK обновлен в `distrib/` | Требуется ручная приёмка на физическом устройстве |
 
 ## Изменённый код
 
@@ -47,14 +47,21 @@ Resolver подключён ко всем трём вариантам списк
 - `legacy/core/.../preferences/Settings.java` (версия 112);
 - `legacy/core/.../preferences/GeneralSettingsDescriptions.java`;
 - `legacy/core/.../preferences/upgrader/GeneralSettingsUpgraderTo112.java`;
+- `legacy/core/.../preferences/KoinModule.kt`;
+- `legacy/core/src/main/res/values/arrays_general_settings_values.xml`;
 - `legacy/ui/legacy/.../MessageTopView.kt`, `MessageHeader.java`, `message_view_header.xml`;
 - `legacy/ui/legacy/.../MessageListSenderAvatarResolver.kt`, `MessageListFragment.kt`, `LegacyMessageListFragment.kt`;
-- `legacy/ui/legacy/.../ContactPictureLoader.kt`.
+- `legacy/ui/legacy/.../ContactPictureLoader.kt`;
+- `legacy/ui/legacy/.../GeneralSettingsFragment.kt`, `GeneralSettingsDataStore.kt`;
+- `legacy/ui/legacy/src/main/res/xml/general_settings.xml`;
+- `legacy/ui/legacy/src/main/res/values/arrays_general_settings_strings.xml`;
+- `legacy/ui/legacy/src/main/res/values/strings.xml`, `values-ru/strings.xml`.
 
 ## Выполненные автоматические проверки
 
 - `:legacy:core:testDebugUnitTest --tests com.fsck.k9.preferences.GeneralSettingsDescriptionsTest` — успешно (версия 112 и миграция);
-- `:core:preference:impl:jvmTest` — успешно (37 тестов: DMARC unfolding, comments, BIMI assertion, manager rollback);
+- `:core:preference:impl:jvmTest` — успешно (42 теста: DMARC unfolding, comments, BIMI assertion, manager rollback, priority & fallback settings);
 - `:feature:mail:sender:avatar:internal:testDebugUnitTest` — успешно (40 тестов: многострочные TXT, empty `a=;`, SVG gradients, safe redirect, thread-safe cache);
-- `:legacy:ui:legacy:testDebugUnitTest --tests com.fsck.k9.ui.messagelist.MessageListSenderAvatarResolverTest --tests com.fsck.k9.ui.messageview.MessageViewSenderAvatarResolverTest` — успешно (0ms кэшированный BIMI и щит верификации);
-- `spotlessCheck` / `spotlessApply` — форматирование соответствует стандартам проекта.
+- `:legacy:ui:legacy:testDebugUnitTest` — успешно (`SenderAvatarPreferenceModeTest`, `MessageListSenderAvatarResolverTest`, `MessageViewSenderAvatarResolverTest`);
+- `spotlessCheck` / `spotlessApply` — форматирование соответствует стандартам проекта;
+- `:app-thunderbird:assembleFullDebug` — успешно собран APK в `distrib/thunderbird-full-debug.apk` (59 288 553 байт, SHA-256: `4F49CA1B7829AC7A2F2BC21773BF7EDD22D573BBA31F5955AFD3532640025C0C`, подпись v1/v2 подтверждена apksigner).

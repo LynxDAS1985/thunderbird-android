@@ -134,6 +134,8 @@ val preferencesModule = module {
         DefaultSenderAvatarSettingsPreferenceManager(
             messageListPreferencesManager = get(),
             notificationPreferenceManager = get(),
+            storage = get(),
+            storageEditor = get(),
             scope = get(named("AppCoroutineScope")),
         )
     }

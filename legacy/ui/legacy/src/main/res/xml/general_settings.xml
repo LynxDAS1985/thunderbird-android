@@ -388,42 +388,142 @@
     </PreferenceScreen>
 
     <PreferenceScreen
-        android:icon="@drawable/ic_account_color"
+        android:icon="@drawable/ic_account_circle"
         android:key="sender_avatar_preferences"
         android:summary="@string/sender_avatar_preferences_summary"
         android:title="@string/sender_avatar_preferences_title"
         search:ignore="true"
         >
 
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:key="sender_avatars_enabled"
+            android:summaryOff="@string/sender_avatars_enabled_summary_off"
+            android:summaryOn="@string/sender_avatars_enabled_summary_on"
+            android:title="@string/sender_avatars_enabled_title"
+            />
+
         <PreferenceCategory
-            android:key="sender_avatar_message_list_preferences"
-            android:title="@string/messagelist_preferences"
+            android:dependency="sender_avatars_enabled"
+            android:key="sender_avatar_sources_category"
+            android:title="@string/sender_avatar_sources_category_title"
             >
 
-            <CheckBoxPreference
-                android:key="messagelist_show_contact_picture"
-                android:summary="@string/global_settings_show_contact_picture_summary"
-                android:title="@string/global_settings_show_contact_picture_label"
+            <SwitchPreferenceCompat
+                android:defaultValue="true"
+                android:dependency="sender_avatars_enabled"
+                android:key="sender_avatar_source_contacts"
+                android:summary="@string/sender_avatar_source_contacts_summary"
+                android:title="@string/sender_avatar_source_contacts_title"
                 />
 
-            <CheckBoxPreference
-                android:dependency="messagelist_show_contact_picture"
-                android:key="messagelist_colorize_missing_contact_pictures"
-                android:summary="@string/global_settings_colorize_missing_contact_pictures_summary"
-                android:title="@string/global_settings_colorize_missing_contact_pictures_label"
+            <SwitchPreferenceCompat
+                android:defaultValue="true"
+                android:dependency="sender_avatars_enabled"
+                android:key="sender_avatar_source_bimi"
+                android:summary="@string/sender_avatar_source_bimi_summary"
+                android:title="@string/sender_avatar_source_bimi_title"
                 />
 
         </PreferenceCategory>
 
         <PreferenceCategory
-            android:key="sender_avatar_notification_preferences"
-            android:title="@string/notifications_title"
+            android:dependency="sender_avatars_enabled"
+            android:key="sender_avatar_priority_category"
+            android:title="@string/sender_avatar_priority_category_title"
+            >
+
+            <ListPreference
+                android:defaultValue="CONTACTS_FIRST"
+                android:dependency="sender_avatars_enabled"
+                android:dialogTitle="@string/sender_avatar_priority_title"
+                android:entries="@array/sender_avatar_priority_entries"
+                android:entryValues="@array/sender_avatar_priority_values"
+                android:key="sender_avatar_priority"
+                android:title="@string/sender_avatar_priority_title"
+                app:useSimpleSummaryProvider="true"
+                />
+
+        </PreferenceCategory>
+
+        <PreferenceCategory
+            android:dependency="sender_avatars_enabled"
+            android:key="sender_avatar_fallback_category"
+            android:title="@string/sender_avatar_fallback_category_title"
+            >
+
+            <ListPreference
+                android:defaultValue="COLORED_MONOGRAM"
+                android:dependency="sender_avatars_enabled"
+                android:dialogTitle="@string/sender_avatar_fallback_style_title"
+                android:entries="@array/sender_avatar_fallback_style_entries"
+                android:entryValues="@array/sender_avatar_fallback_style_values"
+                android:key="sender_avatar_fallback_style"
+                android:title="@string/sender_avatar_fallback_style_title"
+                app:useSimpleSummaryProvider="true"
+                />
+
+        </PreferenceCategory>
+
+        <PreferenceCategory
+            android:dependency="sender_avatars_enabled"
+            android:key="sender_avatar_placement_category"
+            android:title="@string/sender_avatar_placement_category_title"
             >
 
             <SwitchPreferenceCompat
+                android:defaultValue="true"
+                android:dependency="sender_avatars_enabled"
+                android:key="messagelist_show_contact_picture"
+                android:summary="@string/sender_avatar_placement_message_list_summary"
+                android:title="@string/sender_avatar_placement_message_list_title"
+                />
+
+            <SwitchPreferenceCompat
+                android:defaultValue="true"
+                android:dependency="sender_avatars_enabled"
                 android:key="notification_show_contact_picture"
-                android:summary="@string/notification_show_contact_picture_summary"
-                android:title="@string/notification_show_contact_picture_title"
+                android:summary="@string/sender_avatar_placement_notifications_summary"
+                android:title="@string/sender_avatar_placement_notifications_title"
+                />
+
+            <SwitchPreferenceCompat
+                android:defaultValue="true"
+                android:dependency="sender_avatars_enabled"
+                android:key="sender_avatar_show_in_message_view"
+                android:summary="@string/sender_avatar_placement_message_view_summary"
+                android:title="@string/sender_avatar_placement_message_view_title"
+                />
+
+        </PreferenceCategory>
+
+        <PreferenceCategory
+            android:dependency="sender_avatars_enabled"
+            android:key="sender_avatar_security_category"
+            android:title="@string/sender_avatar_security_category_title"
+            >
+
+            <SwitchPreferenceCompat
+                android:defaultValue="true"
+                android:dependency="sender_avatar_source_bimi"
+                android:key="sender_avatar_show_verified_shield"
+                android:summary="@string/sender_avatar_show_verified_shield_summary"
+                android:title="@string/sender_avatar_show_verified_shield_title"
+                />
+
+            <SwitchPreferenceCompat
+                android:defaultValue="false"
+                android:dependency="sender_avatar_source_bimi"
+                android:key="sender_avatar_wifi_only"
+                android:summary="@string/sender_avatar_wifi_only_summary"
+                android:title="@string/sender_avatar_wifi_only_title"
+                />
+
+            <Preference
+                android:dependency="sender_avatar_source_bimi"
+                android:key="sender_avatar_clear_cache"
+                android:summary="@string/sender_avatar_clear_cache_summary"
+                android:title="@string/sender_avatar_clear_cache_title"
                 />
 
         </PreferenceCategory>

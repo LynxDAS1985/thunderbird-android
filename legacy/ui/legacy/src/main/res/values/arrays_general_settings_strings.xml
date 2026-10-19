@@ -200,4 +200,14 @@
         <item>@string/global_settings_messageview_body_content_type_text_plain</item>
     </string-array>
 
+    <string-array name="sender_avatar_priority_entries">
+        <item>@string/sender_avatar_priority_contacts_first</item>
+        <item>@string/sender_avatar_priority_bimi_first</item>
+    </string-array>
+
+    <string-array name="sender_avatar_fallback_style_entries">
+        <item>@string/sender_avatar_fallback_monogram</item>
+        <item>@string/sender_avatar_fallback_generic</item>
+    </string-array>
+
 </resources>
