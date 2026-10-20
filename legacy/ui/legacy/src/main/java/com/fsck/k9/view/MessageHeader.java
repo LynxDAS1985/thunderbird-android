@@ -36,6 +36,7 @@ import com.fsck.k9.ui.messageview.MessageViewSenderAvatar;
 import com.fsck.k9.ui.messageview.MessageViewRecipientFormatter;
 import com.fsck.k9.ui.messageview.RecipientNamesView;
 import com.google.android.material.chip.Chip;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textview.MaterialTextView;
 import net.thunderbird.core.android.account.LegacyAccountDto;
 import net.thunderbird.core.common.mail.Flag;
@@ -96,6 +97,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
                 senderVerifiedBadge,
                 getContext().getString(R.string.sender_avatar_verified_tooltip)
             );
+            senderVerifiedBadge.setOnClickListener(this);
         }
         cryptoStatusIcon = findViewById(R.id.crypto_status_icon);
         recipientNamesView = findViewById(R.id.recipients);
@@ -145,6 +147,8 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
             messageHeaderClickListener.onParticipantsContainerClick();
         } else if (id == R.id.view_all_attachments || id == R.id.attachment_summary_container) {
             messageHeaderClickListener.onViewAllAttachmentsClick();
+        } else if (id == R.id.sender_verified_badge) {
+            showSenderVerifiedDialog();
         }
     }
 
@@ -256,6 +260,14 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         setReplyActions(message, account);
 
         setVisibility(View.VISIBLE);
+    }
+
+    private void showSenderVerifiedDialog() {
+        new MaterialAlertDialogBuilder(getContext())
+            .setTitle(R.string.sender_avatar_verified_dialog_title)
+            .setMessage(R.string.sender_avatar_verified_dialog_message)
+            .setPositiveButton(android.R.string.ok, null)
+            .show();
     }
 
     public void setSenderAvatar(@NonNull MessageViewSenderAvatar senderAvatar) {

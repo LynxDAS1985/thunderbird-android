@@ -404,6 +404,17 @@
             />
 
         <PreferenceCategory
+            android:key="sender_avatar_preview_category"
+            android:title="@string/sender_avatar_preview_category_title"
+            >
+
+            <com.fsck.k9.ui.settings.general.SenderAvatarPreviewPreference
+                android:key="sender_avatar_preview"
+                />
+
+        </PreferenceCategory>
+
+        <PreferenceCategory
             android:dependency="sender_avatars_enabled"
             android:key="sender_avatar_sources_category"
             android:title="@string/sender_avatar_sources_category_title"

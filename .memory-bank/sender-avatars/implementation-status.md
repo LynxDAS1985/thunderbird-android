@@ -64,4 +64,10 @@ Resolver подключён ко всем трём вариантам списк
 - `:feature:mail:sender:avatar:internal:testDebugUnitTest` — успешно (40 тестов: многострочные TXT, empty `a=;`, SVG gradients, safe redirect, thread-safe cache);
 - `:legacy:ui:legacy:testDebugUnitTest` — успешно (`SenderAvatarPreferenceModeTest`, `MessageListSenderAvatarResolverTest`, `MessageViewSenderAvatarResolverTest`);
 - `spotlessCheck` / `spotlessApply` — форматирование соответствует стандартам проекта;
-- `:app-thunderbird:assembleFullDebug` — успешно собран APK в `distrib/thunderbird-full-debug.apk` (53 892 013 байт, SHA-256: `46BE6010945699855099B562146FA78F7F4E4C8480F4DD92D7BB5A2C1597966D`, подпись v1/v2 подтверждена apksigner).
+- `:app-thunderbird:assembleFullDebug` — успешно собран APK в `distrib/thunderbird-full-debug.apk` (53 898 994 байт, подпись v1/v2 подтверждена apksigner).
+
+## Дополнительные UX-улучшения (2026-10-20)
+
+- **T-016 (Диалог подтверждения очистки кэша)**: `MaterialAlertDialogBuilder` запрашивает подтверждение перед вызовом `bimiLogoRepository.clearCache()`.
+- **T-017 (Интерактивный щит верификации)**: Нажатие на `sender_verified_badge` в `MessageHeader` открывает диалог с пояснением аутентификации DMARC и BIMI.
+- **T-018 (Интерактивный предпросмотр)**: Реализован `SenderAvatarPreviewPreference` с макетом входящего письма (`preference_sender_avatar_preview.xml`), мгновенно реагирующий на любые переключения настроек.

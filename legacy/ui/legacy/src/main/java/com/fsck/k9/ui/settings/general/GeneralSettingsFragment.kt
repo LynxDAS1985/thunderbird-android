@@ -28,6 +28,7 @@ import com.fsck.k9.ui.base.extensions.withArguments
 import com.fsck.k9.ui.observe
 import com.fsck.k9.ui.settings.notificationactions.NotificationActionsSettingsActivity
 import com.fsck.k9.ui.settings.remove
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.takisoft.preferencex.PreferenceFragmentCompat
 import java.text.SimpleDateFormat
@@ -253,18 +254,26 @@ class GeneralSettingsFragment : PreferenceFragmentCompat() {
     private fun initializeSenderAvatarPreferences() {
         findPreference<Preference>("sender_avatar_clear_cache")?.onPreferenceClickListener =
             Preference.OnPreferenceClickListener {
-                viewLifecycleOwner.lifecycleScope.launch {
-                    try {
-                        val count = withContext(Dispatchers.IO) {
-                            bimiLogoRepository.clearCache()
+                val ctx = context ?: return@OnPreferenceClickListener true
+                MaterialAlertDialogBuilder(ctx)
+                    .setTitle(R.string.sender_avatar_clear_cache_dialog_title)
+                    .setMessage(R.string.sender_avatar_clear_cache_dialog_message)
+                    .setPositiveButton(R.string.sender_avatar_clear_cache_dialog_confirm) { _, _ ->
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            try {
+                                val count = withContext(Dispatchers.IO) {
+                                    bimiLogoRepository.clearCache()
+                                }
+                                val currentCtx = context ?: return@launch
+                                val message = currentCtx.getString(R.string.sender_avatar_cache_cleared_count, count)
+                                Toast.makeText(currentCtx, message, Toast.LENGTH_SHORT).show()
+                            } catch (e: Exception) {
+                                Log.e(e, "Error clearing BIMI logo cache")
+                            }
                         }
-                        val ctx = context ?: return@launch
-                        val message = ctx.getString(R.string.sender_avatar_cache_cleared_count, count)
-                        Toast.makeText(ctx, message, Toast.LENGTH_SHORT).show()
-                    } catch (e: Exception) {
-                        Log.e(e, "Error clearing BIMI logo cache")
                     }
-                }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
                 true
             }
 
@@ -272,11 +281,26 @@ class GeneralSettingsFragment : PreferenceFragmentCompat() {
         val contactsSwitch = findPreference<SwitchPreferenceCompat>("sender_avatar_source_contacts")
         val bimiSwitch = findPreference<SwitchPreferenceCompat>("sender_avatar_source_bimi")
         val priorityPref = findPreference<ListPreference>("sender_avatar_priority")
+        val fallbackPref = findPreference<ListPreference>("sender_avatar_fallback_style")
+        val shieldPref = findPreference<SwitchPreferenceCompat>("sender_avatar_show_verified_shield")
+        val previewPref = findPreference<SenderAvatarPreviewPreference>("sender_avatar_preview")
 
         fun updatePrioritySummaryAndState() {
             val isMasterOn = masterSwitch?.isChecked ?: true
             val hasContacts = contactsSwitch?.isChecked ?: true
             val hasBimi = bimiSwitch?.isChecked ?: true
+            val currentPriority = priorityPref?.value ?: "CONTACTS_FIRST"
+            val currentFallback = fallbackPref?.value ?: "COLORED_MONOGRAM"
+            val hasShield = shieldPref?.isChecked ?: true
+
+            previewPref?.updateState(
+                isMasterEnabled = isMasterOn,
+                isContactsEnabled = hasContacts,
+                isBimiEnabled = hasBimi,
+                priority = currentPriority,
+                fallbackStyle = currentFallback,
+                isShowShield = hasShield,
+            )
 
             if (!isMasterOn) {
                 priorityPref?.isEnabled = false
@@ -313,9 +337,17 @@ class GeneralSettingsFragment : PreferenceFragmentCompat() {
         masterSwitch?.onPreferenceChangeListener = dynamicUpdateListener
         contactsSwitch?.onPreferenceChangeListener = dynamicUpdateListener
         bimiSwitch?.onPreferenceChangeListener = dynamicUpdateListener
+        shieldPref?.onPreferenceChangeListener = dynamicUpdateListener
         priorityPref?.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, newValue ->
             view?.post {
                 priorityPref.value = newValue as? String
+                updatePrioritySummaryAndState()
+            }
+            true
+        }
+        fallbackPref?.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, newValue ->
+            view?.post {
+                fallbackPref.value = newValue as? String
                 updatePrioritySummaryAndState()
             }
             true
